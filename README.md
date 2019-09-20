@@ -35,7 +35,7 @@ Horizontally, create a folder called OXTS, and put the ground truth pose .txt fi
 Then create a pcd file list:
 ```
 touch file_list.txt
-ls HDL64 >> filelist.txt
+ls HDL64 >> file_list.txt
 ```
 
 Then the data is ready for test.
