@@ -563,6 +563,7 @@ struct submapid_error_t {
 
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 };
+
 struct edgeid_error_t {
     // pgo_edge_pose ^ -1 * reg_edge_pose
     Pose3d pose_error;
