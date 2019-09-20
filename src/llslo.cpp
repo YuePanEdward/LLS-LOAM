@@ -1,7 +1,8 @@
 
 #include "llslo.h"
 
-namespace map_pose {
+namespace lls_loam {
+
 
 // Get the 6DOF pose from OXTS data
 // Here, we use proj4 library to do the UTM (Universe Tranverse Mecator) Projection
@@ -71,7 +72,11 @@ Eigen::Matrix4d GetTransform(sensor::gnssins_info_t &gnss_info) {
     trans[2] = alt;
 
     Eigen::Matrix4d pose = Eigen::Matrix4d::Identity();
-    pose.block<3, 3>(0, 0) = Rx * Ry * Rz;
+    
+    //TODO //Check the reason
+    pose.block<3, 3>(0, 0) = Rz * Ry * Rx;
+    // Should be z y x
+    
     pose.block<3, 1>(0, 3) << trans[0], trans[1], trans[2];
 
     return pose;
@@ -100,20 +105,22 @@ Transaction::Transaction(transaction_param_t &config) {
     calib_cam_to_oxts_.copyFrom(config.calib_cam_to_oxts);
     std::deque<int>().swap(active_submaps_); // id of first sub map
     // data_loader_;
-    SetConfig(config.max_frames, config.rotation_accumulate, config.translation_accumulate);
+    SetConfig(config.max_frames, config.rotation_accumulate, config.translation_accumulate,config.local_map_max_size);
 }
 
 Transaction::~Transaction() {}
 
 // Set configure parameters, Fix it Later
 bool Transaction::SetConfig(unsigned max_frames, double rotation_accumulate,
-                            double translation_accumulate) {
+                            double translation_accumulate, int local_map_max_size) {
     config_.max_frames = max_frames;
     config_.rotation_accumulate = rotation_accumulate;
     config_.translation_accumulate = translation_accumulate;
+    config_.local_map_max_size = local_map_max_size;
     return true;
 }
 
+# if 0 // If you'd like to import your own data (pose in OXTS format and point cloud in pcd format), use the following function
 // Load IMU and GNSS raw datat from PC
 bool Transaction::LoadPcImuGnss(int begin_frame, int end_frame) {
     if (!raw_datas_.empty()) {
@@ -323,6 +330,7 @@ bool Transaction::LoadPcImuGnss(int begin_frame, int end_frame) {
 
     return true;
 }
+#endif
 
 // Divide the transaction into several submaps according to multiple rules 
 // Rules: consecutive frame number, accumulated translation (using), accumilated heading angle (using) ...
@@ -628,7 +636,7 @@ bool Transaction::SubmapOdom(Submap &submap)
 
     // Begin
     LOG(INFO) << "Submap's frame number is " << submap.frame_number;
-
+    
     // Preprocessing
     LOG(INFO) << "Preprocessing & Registration for each frame";
     std::shared_ptr<PointCloud> pointcloud_lidar_filtered(new PointCloud);
@@ -637,11 +645,18 @@ bool Transaction::SubmapOdom(Submap &submap)
     // INIT frame pose as gnss pose
     submap.raw_data_group[0].raw_frame.pose.copyFrom(submap.raw_data_group[0].raw_gnss.pose);
     t0 = clock();
+
+    Submap localmap;
+    localmap.init();
+    localmap.submap_id.hdmap_unique_idx = -1;
+    localmap.frame_number=0;
+
     for (int i = 0; i < submap.frame_number; i++) {
+        
         while (xy_max <= 60 && gf_min_grid_num >= 6) {
             LOG(INFO) << "---------------Frame [" << i << "] in Submap ["
                       << submap.submap_id.transaction_id << " - " << submap.submap_id.submap_id << "]--------------";
-            LOG(INFO) << "*** *** FILTER *** ***";
+            LOG(INFO)<<"*** *** PREPROCESSING *** ***";
             pointcloud_lidar_filtered = std::make_shared<PointCloud>();
             cld_unground_index.clear();
 
@@ -731,22 +746,23 @@ bool Transaction::SubmapOdom(Submap &submap)
             //Lidar Odometry Registration
             if (i == 0) {
                 break;
-            } else {
-                LOG(INFO) << "*** *** REGISTRATION *** ***";
+            } 
+            else {
+                LOG(INFO) << "*** SCAN TO SCAN REGISTRATION ***";
                 Pose3d pose2to1;
-                int code = reg_.PairwiseReg(submap.raw_data_group[i-1], submap.raw_data_group[i], pose2to1);
-                if (code == 1) {
+                int code = reg_.PairwiseReg(submap.raw_data_group[i-1], submap.raw_data_group[i], pose2to1, GNSSINSPoseDiff);
+                if (code == 1) { // Successful 
                     submap.raw_data_group[i].raw_frame.last_transform.copyFrom(pose2to1);
                     //Get frame's lidar odometry pose
                     submap.raw_data_group[i].raw_frame.pose.SetPose(
                             submap.raw_data_group[i - 1].raw_frame.pose.GetMatrix() * pose2to1.GetMatrix());
                     break;
-                } else if (code == -1 || code == -2 || code == -3) {
+                } else if (code == -1 || code == -2 || code == -3) { // May be some problem
                     // Expand Dis Filter
                     gf_min_grid_num -= 2;
                     xy_max += 10;
                     continue;
-                } else {
+                } else { // Absolutely failed
                     // code == -4  Registration Failed, Nothing we can do.
                     LOG(FATAL) << "Fix Registration Method Between Frames";
                     break;
@@ -759,14 +775,43 @@ bool Transaction::SubmapOdom(Submap &submap)
                 
             }
         }
-    }
 
-    //Free memory
+        if (i > int(config_.local_map_max_size/2)) {
+            // Merge the frames of the local map
+            MergeFrames(localmap);
+                 
+            Pose3d pose2tom;
+                
+            LOG(INFO) << "*** SCAN TO MAP REGISTRATION ***";
+
+            // scan-to-map registration
+            if(reg_.PairwiseReg(localmap, submap.raw_data_group[i], pose2tom)) {          
+                submap.raw_data_group[i].raw_frame.last_transform.copyFrom(pose2tom);
+                submap.raw_data_group[i].raw_frame.pose.SetPose(
+                    submap.raw_data_group[i - 1].raw_frame.pose.GetMatrix() * pose2tom.GetMatrix());
+            }
+         }
+
+         // Update local map
+         if (i >= config_.local_map_max_size) {
+            localmap.raw_data_group.erase(localmap.raw_data_group.begin());
+            localmap.raw_data_group.push_back(submap.raw_data_group[i]); 
+         }
+         else {
+            localmap.raw_data_group.push_back(submap.raw_data_group[i]);
+            localmap.frame_number++;
+         }
+         localmap.pose=localmap.raw_data_group[localmap.raw_data_group.size()-1].raw_frame.pose;
+    }
+    // Free Local Map's memory
+    localmap.release_cld_lidar();
+    localmap.releaseIndex();
+    localmap.releaseRawData();
+
+    // Free memory
     std::vector<PointType>().swap(pointcloud_lidar_filtered->points);
     pointcloud_lidar_filtered = std::make_shared<PointCloud>();
     std::vector<unsigned int>().swap(cld_unground_index);
-
-
 
     submap.last_frame_transform.copyFrom(submap.raw_data_group[submap.frame_number - 1].raw_frame.last_transform);
     t1 = clock();
@@ -776,13 +821,13 @@ bool Transaction::SubmapOdom(Submap &submap)
     // INIT submap parameters
     submap.pose.copyFrom(submap.raw_data_group[0].raw_gnss.pose);
 
-    //Merge the frames to the submap
+    // Merge the frames to the submap
     MergeFrames(submap);
 
-    //Use the submap's cloud in world frame to calculate bounding box
+    // Use the submap's cloud in world frame to calculate bounding box
     filter_.getCloudBound(*submap.cld_lidar_ptr, submap.bbox);
 
-    //Evaluate the accuracy
+    // Evaluate the accuracy
     submap.submap_mae = GetMae(submap);
 
     if (submap.submap_mae < 0.1)
@@ -854,10 +899,21 @@ bool Transaction::MergeFrames(Submap &submap)
     int merge_frame_sample_rate = submap.frame_number / 15 + 1;
 
     //double merge_tran_dis_threshold = 0.1;
-
-    int random_downsample_step_low_intensity = 30;
-    int random_downsample_step_high_intensity = 10;
+    
+    int random_downsample_step_low_intensity;
+    int random_downsample_step_high_intensity;
     int intensity_thre = 180;
+
+    if (submap.submap_id.hdmap_unique_idx<0) //Local map
+    {
+        random_downsample_step_low_intensity = 10;
+        random_downsample_step_high_intensity = 5;
+    }
+    else
+    {
+        random_downsample_step_low_intensity = 20;
+        random_downsample_step_high_intensity = 10;
+    }
 
     // merge feature point cloud
     CHECK(submap.cld_feature_ptr->points.empty()) << "cld_feature_ptr isn't empty, please check";
@@ -885,21 +941,24 @@ bool Transaction::MergeFrames(Submap &submap)
             filter_.FilterCldWithIdx(submap.raw_data_group[i].raw_frame.cld_lidar_ptr, feature_cld_ptr,
                                      submap.raw_data_group[i].raw_frame.edge_down_index);
             reg_.transformPointCloud(feature_cld_ptr, transform_cld_ptr, frame_pose_ref_submap);
+            
             edge_cld_ptr->points.insert(edge_cld_ptr->points.end(), transform_cld_ptr->points.begin(), transform_cld_ptr->points.end());
 
             // planar points
             filter_.FilterCldWithIdx(submap.raw_data_group[i].raw_frame.cld_lidar_ptr, feature_cld_ptr,
                                      submap.raw_data_group[i].raw_frame.planar_down_index);
             reg_.transformPointCloud(feature_cld_ptr, transform_cld_ptr, frame_pose_ref_submap);
+            
             planar_cld_ptr->points.insert(planar_cld_ptr->points.end(), transform_cld_ptr->points.begin(), transform_cld_ptr->points.end());
 
             // sphere points
             filter_.FilterCldWithIdx(submap.raw_data_group[i].raw_frame.cld_lidar_ptr, feature_cld_ptr,
                                      submap.raw_data_group[i].raw_frame.sphere_down_index);
             reg_.transformPointCloud(feature_cld_ptr, transform_cld_ptr, frame_pose_ref_submap);
+            
             sphere_cld_ptr->points.insert(sphere_cld_ptr->points.end(), transform_cld_ptr->points.begin(), transform_cld_ptr->points.end());
 
-            //Do downsampling for every frame
+            // Do downsampling for every frame
             filter_.RandomDownsample(submap.raw_data_group[i].raw_frame.cld_lidar_ptr, downsample_cld_ptr,
                                      random_downsample_step_low_intensity, random_downsample_step_high_intensity, intensity_thre);
             Pose3d frame_pose;
@@ -916,8 +975,14 @@ bool Transaction::MergeFrames(Submap &submap)
 #if 0 //Pose (Lidar OXTS) refer to the world system 
             frame_pose = submap.raw_data_group[i].raw_gnss.pose;
 #endif
-            //Transform the frame's downsampled cloud to its target frame
-            reg_.transformPointCloud(downsample_cld_ptr, transform_cld_ptr, frame_pose);
+            // Transform the frame's downsampled cloud to its target frame
+            
+            if (submap.submap_id.hdmap_unique_idx<0) { //Local map
+                 reg_.transformPointCloud(downsample_cld_ptr, transform_cld_ptr, frame_pose_ref_submap); //For KITTI registration display
+            }
+            else {
+                 reg_.transformPointCloud(downsample_cld_ptr, transform_cld_ptr, frame_pose);
+            }
 
             //Merge the frames
             submap.cld_lidar_ptr->points.insert(submap.cld_lidar_ptr->points.end(), transform_cld_ptr->points.begin(),
@@ -1159,6 +1224,7 @@ void Transaction::LoadKITTIData(int begin_frame, int end_frame) {
     kitti_submap.pose=raw_datas_[begin_frame].raw_gnss.pose;
     kitti_submap.frame_number = frame_number_;
     kitti_submap.raw_data_group.insert(kitti_submap.raw_data_group.end(),raw_datas_.begin(),raw_datas_.end());
+    kitti_submap.raw_data_group[0].raw_frame.last_transform.trans(0)+=0.5; //The first frame's motion estimate [This one is according to kitti dataset's property]
     sub_maps_.push_back(kitti_submap);
 }
 
@@ -1216,7 +1282,7 @@ bool Transaction::RunPureLidarOdometry(Submap &submap)
 
     // Ground Filter (Segment Ground and Unground points)
     // gf_min_grid_num is the min point number in a grid. those grid whose point number < gf_min_grid_num would be ignored  
-    int gf_min_grid_num = 9;
+    int gf_min_grid_num = 10;
     // gf_grid_resolution is the size of a grid (unit:m)               
     float gf_grid_resolution = 0.75;
     // points whose [(z - min_z of the grid) > gf_max_grid_height_diff] would be regarded as unground points (unit:m)
@@ -1229,10 +1295,10 @@ bool Transaction::RunPureLidarOdometry(Submap &submap)
     int gf_downsample_rate_nonground = 4;
     // only gf_downsample_grid_number_first points would be randomly selected as the ground points in a grid
     // This group of ground points are used for registration [target ground points (more point number)] 
-    int gf_downsample_grid_number_first = 4;  
+    int gf_downsample_grid_number_first = 2;  
     // only gf_downsample_grid_number_second points would be randomly selected as the ground points in a grid
     // This group of ground points are used for registration [source ground points (less point number)] 
-    int gf_downsample_grid_number_second = 2; 
+    int gf_downsample_grid_number_second = 1; 
 
     // Feature Points Detection
     // Search neighbor_search_K nearest neighbor for doing neighbor PCA 
@@ -1240,7 +1306,7 @@ bool Transaction::RunPureLidarOdometry(Submap &submap)
     // We call v1 the primary vector and v3 the normal vector
     // We define point linearty, planarity and curvature
     // linearty a_1d = (e1-e2)/e1 , planarity a_2d = (e2-e3)/e1 , curvature = e3/(e1+e2+e3)
-    int neighbor_search_K = 9;
+    int neighbor_search_K = 8;
     // Those candidate edge points whose primary direction's z component < linear_vertical_cosine_min would be rejected
     float linear_vertical_cosine_min = 0.75;
     // Those candidate planar points whose normal direction's z component > planar_horizontal_cosine_max would be rejected
@@ -1274,17 +1340,26 @@ bool Transaction::RunPureLidarOdometry(Submap &submap)
     LOG(INFO) << "Total frame number is " << submap.frame_number;
 
     // Preprocessing
-    LOG(INFO) << "Preprocessing for each frame";
     std::shared_ptr<PointCloud> pointcloud_lidar_filtered(new PointCloud);
     std::vector<unsigned int> cld_unground_index;
     
     //submap.raw_data_group[0].raw_frame.pose.copyFrom(submap.pose);
     submap.raw_data_group[0].raw_frame.pose.SetPose(Eigen::Matrix4d::Identity(4,4));
+    
+    // Local map
+    Submap localmap;
+    localmap.init();
+    localmap.submap_id.hdmap_unique_idx = -1;
+    localmap.frame_number=0;
 
     t0 = clock();
     for (int i = 0; i < submap.frame_number; i++)
     {
-        LOG(INFO) << "---------------Frame [" << i << "] --------------";
+       
+      LOG(INFO) << "---------------Frame [" << i << "] --------------";
+        
+      while (xy_max <= 60 && gf_min_grid_num >= 6) {
+        
         pointcloud_lidar_filtered = std::make_shared<PointCloud>();
         std::vector<unsigned int>().swap(cld_unground_index);
 
@@ -1308,7 +1383,7 @@ bool Transaction::RunPureLidarOdometry(Submap &submap)
             AddNoise(submap.raw_data_group[i], 2 * noise_t, 2 * noise_r);
         }
         
-        LOG(INFO)<<"Begin preprocessing";
+        LOG(INFO)<<"*** *** PREPROCESSING *** ***";
         // Import cloud
         submap.raw_data_group[i].raw_frame.init();
         data_loader_.readPcdFile(lidar_root_path_ + "/" + submap.raw_data_group[i].raw_frame.pcd_file_name,
@@ -1368,55 +1443,101 @@ bool Transaction::RunPureLidarOdometry(Submap &submap)
                                           submap.raw_data_group[i].raw_frame.sphere_index,
                                           "Frame_feature  Ground (Silver) ; Edge (Green) ; Planar (Blue) ; Sphere (Red)");
         }
-#endif
+#endif  
+        if (i == 0) break;
         if (i > 0) {  
-//Scan to scan registration
-#if 1
+        //Scan to scan registration
             Pose3d pose2to1;
+
+            LOG(INFO) << "*** SCAN TO SCAN REGISTRATION ***";
+
             int code = reg_.PairwiseReg(submap.raw_data_group[i - 1],
-                             submap.raw_data_group[i], pose2to1);
-            //if (code == 1) {
-                submap.raw_data_group[i].raw_frame.last_transform.copyFrom(pose2to1);
-                //Get frame's lidar odometry pose
-                submap.raw_data_group[i].raw_frame.pose.SetPose(
-                        submap.raw_data_group[i - 1].raw_frame.pose.GetMatrix() * pose2to1.GetMatrix());
-                //LOG(INFO) << "Frame's position (OXTS): " << submap.raw_data_group[i - 1].raw_gnss.pose.trans.transpose();
-                //LOG(INFO) << "Frame's position (LO): " << submap.raw_data_group[i - 1].raw_frame.pose.trans.transpose();
-
-                //Free the memory
-                submap.raw_data_group[i - 1].raw_frame.release_feature_indices();
-
-                //Downsampling for memory management
-                filter_.RandomDownsample(submap.raw_data_group[i - 1].raw_frame.cld_lidar_ptr, pointcloud_lidar_filtered, 100, 20, 180);
-                pointcloud_lidar_filtered->points.swap(submap.raw_data_group[i - 1].raw_frame.cld_lidar_ptr->points);
-                pointcloud_lidar_filtered = std::make_shared<PointCloud>();
-                //break;
-            //} else if (code == -1 || code == -2 || code == -3) {
+                             submap.raw_data_group[i], pose2to1, UniformMotion);
+            if (code == 1 || code == -4 ) { // Successful (1) or  Absolutely failed (-4) 
+               submap.raw_data_group[i].raw_frame.last_transform.copyFrom(pose2to1);
+               //Get frame's lidar odometry pose
+               submap.raw_data_group[i].raw_frame.pose.SetPose(
+                   submap.raw_data_group[i - 1].raw_frame.pose.GetMatrix() * pose2to1.GetMatrix());
+               //LOG(INFO) << "Frame's position (OXTS): " << submap.raw_data_group[i - 1].raw_gnss.pose.trans.transpose();
+               //LOG(INFO) << "Frame's position (LO): " << submap.raw_data_group[i - 1].raw_frame.pose.trans.transpose();
+               if (code==-4) LOG(ERROR) << "Fix Registration Method Between Frames"; //Use default transformation
+               break;
+            } 
+            else if (code == -1 || code == -2 || code == -3) { // May be some problem
                 // Expand Dis Filter
-                //gf_min_grid_num -= 3;
-                //xy_max += 10;
-                //continue;
-            //} else {
-                // code == -4  Registration Failed, Nothing we can do.
-                //LOG(ERROR) << "Fix Registration Method Between Frames";
-                //break;
-            //}
-#endif
-#if 0
-            reg_.pairwise_initial_guess(submap.raw_data_group[i - 1],
-                                        submap.raw_data_group[i]);
-#endif
-           
+                gf_min_grid_num -= 2;
+                xy_max += 10;
+                gf_downsample_rate_nonground -= 1;
+                neighbor_planar_thre_target -= 0.1;
+                neighbor_linear_thre_target -= 0.1;
+                neighbor_planar_thre_source -= 0.05;
+                neighbor_linear_thre_source -= 0.05;
+                linear_vertical_cosine_min -=0.05;
+                planar_horizontal_cosine_max +=0.05;
+                LOG(WARNING)<< "Update the parameters and do the registration again";
+                continue;
+            } 
         }
-    }
+      }
 
-    t1 = clock();
+      
+      if (config_.local_map_max_size>=2) {
+      // When the input local_map_max_size < 2, the scan to map registration would not be done.
+
+      if (i > int(config_.local_map_max_size/2)) {
+      
+          // Merge the frames of the local map
+          MergeFrames(localmap);
+                 
+          Pose3d pose2tom;
+                
+          LOG(INFO) << "*** SCAN TO MAP REGISTRATION ***";
+
+          // scan-to-map registration
+          if(reg_.PairwiseReg(localmap, submap.raw_data_group[i], pose2tom)) {          
+            submap.raw_data_group[i].raw_frame.last_transform.copyFrom(pose2tom);
+            submap.raw_data_group[i].raw_frame.pose.SetPose(
+                submap.raw_data_group[i - 1].raw_frame.pose.GetMatrix() * pose2tom.GetMatrix());
+          }
+      }
+
+      // Update local map
+      if (i >= config_.local_map_max_size) {
+         localmap.raw_data_group.erase(localmap.raw_data_group.begin());
+         localmap.raw_data_group.push_back(submap.raw_data_group[i]); 
+      }
+      else {
+         localmap.raw_data_group.push_back(submap.raw_data_group[i]);
+         localmap.frame_number++;
+      }
+      localmap.pose=localmap.raw_data_group[localmap.raw_data_group.size()-1].raw_frame.pose;
+        
+      if (i>=config_.local_map_max_size) {
+         //Free the memory
+         submap.raw_data_group[i - config_.local_map_max_size].raw_frame.release_feature_indices();
+
+         //Downsampling for memory management
+         filter_.RandomDownsample(submap.raw_data_group[i - config_.local_map_max_size].raw_frame.cld_lidar_ptr, pointcloud_lidar_filtered, 150, 50, 180);
+         pointcloud_lidar_filtered->points.swap(submap.raw_data_group[i - config_.local_map_max_size].raw_frame.cld_lidar_ptr->points);
+         pointcloud_lidar_filtered = std::make_shared<PointCloud>();
+      }
+      }
+
+   }
+
+   t1 = clock();
+    
     //Free memory
     std::vector<unsigned int>().swap(cld_unground_index);
-
-    filter_.RandomDownsample(submap.raw_data_group[submap.frame_number - 1].raw_frame.cld_lidar_ptr, pointcloud_lidar_filtered, 100, 20, 180);
-    pointcloud_lidar_filtered->points.swap(submap.raw_data_group[submap.frame_number - 1].raw_frame.cld_lidar_ptr->points);
-
+    
+    if (submap.frame_number > config_.local_map_max_size) {
+        for (int i=submap.frame_number-1; i >= submap.frame_number-config_.local_map_max_size; i--) {
+           filter_.RandomDownsample(submap.raw_data_group[i].raw_frame.cld_lidar_ptr, pointcloud_lidar_filtered, 150, 50, 180);
+           pointcloud_lidar_filtered->points.swap(submap.raw_data_group[i].raw_frame.cld_lidar_ptr->points);
+           pointcloud_lidar_filtered = std::make_shared<PointCloud>();
+        }
+    }
+    
     LOG(INFO) << "Mean LO consuming time for each frame is " << ((float(t1 - t0) / CLOCKS_PER_SEC) / submap.frame_number * 1000) << " ms";
 
     //Merge the frames to the submap
@@ -1463,8 +1584,13 @@ bool Transaction::RunPureLidarOdometry(Submap &submap)
     viewer_.DisplaySubmapClouds(submap, "LO Lidar Frame (Yellow) ; OXTS Lidar Frame (Purple) ; OXTS Body Frame (Cyan)", INTENSITY, 1);
     
     //Free the memory
-    
+
 #endif
+
+    // Free Local Map's memory
+    localmap.release_cld_lidar();
+    localmap.releaseIndex();
+    localmap.releaseRawData();
 
     return true;
 }
@@ -1579,4 +1705,5 @@ bool Transaction::RunPureLidarOdometry(Submap &submap)
 
 #endif
 
-} // namespace map_pose
+
+} // namespace lls_loam

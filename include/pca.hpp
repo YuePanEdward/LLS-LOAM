@@ -1,6 +1,11 @@
+//
+// This file is for the Implement of Principle Component Analysis (PCA) of point cloud data
+// With the assist of OpenCV
+// Dependent 3rd Libs: PCL (>=1.7), OpenCV, Eigen    
+//
 
-#ifndef _INCLUDE_COMMON_PCA_H_
-#define _INCLUDE_COMMON_PCA_H_
+#ifndef _INCLUDE_PCA_H_
+#define _INCLUDE_PCA_H_
 
 //pcl
 #include <pcl/features/normal_3d_omp.h>
@@ -8,6 +13,7 @@
 #include <pcl/point_cloud.h>
 #include <pcl/kdtree/kdtree_flann.h>
 #include <pcl/segmentation/extract_clusters.h>
+
 //opencv2
 #include <opencv2/core/types_c.h>
 #include <opencv2/core/core_c.h>
@@ -17,7 +23,7 @@
 
 #include <vector>
 
-namespace map_pose
+namespace lls_loam
 {
 struct eigenValue // Eigen Value ,lamada1 > lamada2 > lamada3;
 {
@@ -339,5 +345,5 @@ private:
 	}
 };
 
-} // namespace map_pose
-#endif //_INCLUDE_COMMON_PCA_H_
+} // namespace lls_loam
+#endif //_INCLUDE_PCA_H_

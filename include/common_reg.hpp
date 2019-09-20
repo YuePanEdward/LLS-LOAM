@@ -1,6 +1,12 @@
+//
+// This file is for the common implement of various registration methods
+// It would cover the classic fine registration method icp and its variants
+// And the feature points based registration methods 
+// Dependent 3rd Libs: PCL (>=1.7) , Eigen     
+//
 
-#ifndef _INCLUDE_COMMON_COMMON_REG_H_
-#define _INCLUDE_COMMON_COMMON_REG_H_
+#ifndef _INCLUDE_COMMON_REG_H_
+#define _INCLUDE_COMMON_REG_H_
 
 #include <cmath>
 #include <memory>
@@ -36,7 +42,7 @@
 #include "pca.hpp"
 #include "map_viewer.hpp"
 
-namespace map_pose
+namespace lls_loam
 {
 
 enum point_type
@@ -84,9 +90,9 @@ public:
     // code=-3::Too little Ground features found; code=-4::Too large translation or rotation for one iteration
     // Fix it later using try - catch
     //! WARNING: RawData.noise_gnss.pose will be used as initial guess, make sure it is INIT correctly before you call this function
-    int PairwiseReg(RawData &group1, RawData &group2, Pose3d &pose) {
+    int PairwiseReg(RawData &group1, RawData &group2, Pose3d &pose, InitialGuessType initial_type) {
         
-        int max_iter_num = 20;
+        int max_iter_num = 12;
         float thre_dis_ground = 0.75f;
         float thre_dis_edge = 0.75f;
         float thre_dis_planar = 0.75f;
@@ -116,32 +122,47 @@ public:
         pcl::PointCloud<PointT>::Ptr Source_Edge_g(new pcl::PointCloud<PointT>);
         pcl::PointCloud<PointT>::Ptr Source_Planar_g(new pcl::PointCloud<PointT>);
         pcl::PointCloud<PointT>::Ptr Source_Sphere_g(new pcl::PointCloud<PointT>);
+        
+        Eigen::Matrix4d transformation2to1g;
 
-#if 1
-        // Provide initial guess by OXTS pose
-        // Pose3d pose2to1g(group1.raw_gnss.pose.quat.conjugate() * group2.raw_gnss.pose.quat,
-        //                  group1.raw_gnss.pose.quat.conjugate() * (group2.raw_gnss.pose.trans - group1.raw_gnss.pose.trans));
+        switch (initial_type)
+        {
+            case GNSSINSPoseDiff:
+            {
+                // Provide initial guess by OXTS pose
+                // Pose3d pose2to1g(group1.raw_gnss.pose.quat.conjugate() * group2.raw_gnss.pose.quat,
+                //                  group1.raw_gnss.pose.quat.conjugate() * (group2.raw_gnss.pose.trans - group1.raw_gnss.pose.trans));
 
-        Pose3d pose2to1g(group1.noise_gnss.pose.quat.conjugate() * group2.noise_gnss.pose.quat,
-                         group1.noise_gnss.pose.quat.conjugate() * (group2.noise_gnss.pose.trans - group1.noise_gnss.pose.trans));
+                Pose3d pose2to1g(group1.noise_gnss.pose.quat.conjugate() * group2.noise_gnss.pose.quat,
+                group1.noise_gnss.pose.quat.conjugate() * (group2.noise_gnss.pose.trans - group1.noise_gnss.pose.trans));
 
-        Eigen::Matrix4d transformation2to1g = pose2to1g.GetMatrix();
-        LOG(INFO) << "Initial Guess of OXTS \n"
-                  << transformation2to1g;
-#endif
-#if 0
-        //Provide initial guess by uniform motion model
-        Eigen::Matrix4d transformation2to1g = group1.raw_frame.last_transform.GetMatrix();
-        Pose3d pose2to1g;
-        pose2to1g.SetPose(transformation2to1g);
-        LOG(INFO) << "Initial Guess of Unifrom Motion \n"
-                  << transformation2to1g;
-#endif
+                transformation2to1g = pose2to1g.GetMatrix();
+                LOG(INFO) << "Initial Guess of OXTS \n"
+                          << transformation2to1g;
+                break;
+            }
+            case UniformMotion:
+            {
+                // Provide initial guess by uniform motion model
+                transformation2to1g = group1.raw_frame.last_transform.GetMatrix();
+                Pose3d pose2to1g;
+                pose2to1g.SetPose(transformation2to1g);
+                LOG(INFO) << "Initial Guess of Unifrom Motion \n"
+                          << transformation2to1g;
+                break;
+            }
+            case IMUPreintegration:
+            {
+                // Provide initial guess by imu preintegration (TO DO) 
+                // InitialGuessByIMUPreintergration();
+                break;
+            }
+            default:
+            {
+                break;
+            }   
+        }
 
-#if 0
-        //Provide initial guess by imu preintegration (TO DO)
-
-#endif
         //Apply intial guess
         pcl::transformPointCloudWithNormals(*Source_Ground, *Source_Ground_g, transformation2to1g);
         pcl::transformPointCloudWithNormals(*Source_Edge, *Source_Edge_g, transformation2to1g);
@@ -231,6 +252,120 @@ public:
         group2.raw_frame.pose.SetPose(group1.raw_frame.pose.GetMatrix() * transformation2to1);
         return 1;
     }
+    
+    // Scan to local map registration
+    bool PairwiseReg(Submap &localmap, RawData &currentscan, Pose3d &pose) {
+        clock_t t1, t2;
+
+        int max_iter_num = 6;
+        float thre_dis_ground = 1.0f;
+        float thre_dis_edge = 0.8f;
+        float thre_dis_planar = 0.8f;
+        float thre_dis_sphere = 0.7f;
+
+        //LOG(INFO) << "submap1.cld_lidar_ptr size " << submap1.cld_lidar_ptr->points.size();
+        //LOG(INFO) << "submap2.cld_lidar_ptr size " << submap2.cld_lidar_ptr->points.size();
+
+        //Preprocessing: Initialize Feature Point Cloud (Fix it later by removing pcl dependency)
+        pcl::PointCloud<PointT>::Ptr Source_Ground(new pcl::PointCloud<PointT>);
+        pcl::PointCloud<PointT>::Ptr Source_Edge(new pcl::PointCloud<PointT>);
+        pcl::PointCloud<PointT>::Ptr Source_Planar(new pcl::PointCloud<PointT>);
+        pcl::PointCloud<PointT>::Ptr Source_Sphere(new pcl::PointCloud<PointT>);
+        pcl::PointCloud<PointT>::Ptr Target_Ground(new pcl::PointCloud<PointT>);
+        pcl::PointCloud<PointT>::Ptr Target_Edge(new pcl::PointCloud<PointT>);
+        pcl::PointCloud<PointT>::Ptr Target_Planar(new pcl::PointCloud<PointT>);
+        pcl::PointCloud<PointT>::Ptr Target_Sphere(new pcl::PointCloud<PointT>);
+
+        t1 = clock();
+        
+        ExtractFeaturePointsFromFullPointCloud(currentscan.raw_frame.cld_lidar_ptr, currentscan.raw_frame.ground_down_index, Source_Ground); 
+        ExtractFeaturePointsFromFullPointCloud(currentscan.raw_frame.cld_lidar_ptr, currentscan.raw_frame.edge_down_index, Source_Edge); 
+        ExtractFeaturePointsFromFullPointCloud(currentscan.raw_frame.cld_lidar_ptr, currentscan.raw_frame.planar_down_index, Source_Planar); 
+        ExtractFeaturePointsFromFullPointCloud(currentscan.raw_frame.cld_lidar_ptr, currentscan.raw_frame.sphere_down_index, Source_Sphere); 
+        ExtractFeaturePointsFromFullPointCloud(localmap.cld_feature_ptr, localmap.ground_index, Target_Ground); 
+        ExtractFeaturePointsFromFullPointCloud(localmap.cld_feature_ptr, localmap.edge_index, Target_Edge); 
+        ExtractFeaturePointsFromFullPointCloud(localmap.cld_feature_ptr, localmap.planar_index, Target_Planar); 
+        ExtractFeaturePointsFromFullPointCloud(localmap.cld_feature_ptr, localmap.sphere_index, Target_Sphere); 
+
+        //Source point cloud initial guess
+        pcl::PointCloud<PointT>::Ptr Source_Ground_g(new pcl::PointCloud<PointT>);
+        pcl::PointCloud<PointT>::Ptr Source_Edge_g(new pcl::PointCloud<PointT>);
+        pcl::PointCloud<PointT>::Ptr Source_Planar_g(new pcl::PointCloud<PointT>);
+        pcl::PointCloud<PointT>::Ptr Source_Sphere_g(new pcl::PointCloud<PointT>);
+
+        //Get initial guess
+        Pose3d pose2to1g;
+
+        //initial guess from submap 2's first frame to submap 1's local frame
+        Eigen::Matrix4d transformation2to1g = localmap.pose.GetMatrix().inverse() * currentscan.raw_frame.pose.GetMatrix();
+
+        pose2to1g.SetPose(transformation2to1g);
+        LOG(INFO) << "Initial Guess of OXTS\n"
+                  << transformation2to1g;
+
+        //Apply intial guess
+        pcl::transformPointCloudWithNormals(*Source_Ground, *Source_Ground_g, transformation2to1g);
+        pcl::transformPointCloudWithNormals(*Source_Edge, *Source_Edge_g, transformation2to1g);
+        pcl::transformPointCloudWithNormals(*Source_Planar, *Source_Planar_g, transformation2to1g);
+        pcl::transformPointCloudWithNormals(*Source_Sphere, *Source_Sphere_g, transformation2to1g);
+
+        //Do registration
+        Eigen::Matrix4f transformation2to1;
+        Eigen::Matrix<float, 6, 6> reg_information_matrix;
+        double trans_x, trans_y, trans_z;
+
+        int code = FeaturePointsRegistration(transformation2to1, reg_information_matrix,
+                                             Source_Ground_g, Source_Edge_g, Source_Planar_g, Source_Sphere_g,
+                                             Target_Ground, Target_Edge, Target_Planar, Target_Sphere,
+                                             max_iter_num, thre_dis_ground, thre_dis_edge,
+                                             thre_dis_planar, thre_dis_sphere, 1);
+        //Feature point efficient registration
+        if (code == 1) {
+            trans_x = transformation2to1(0, 3);
+            trans_y = transformation2to1(1, 3);
+            trans_z = transformation2to1(2, 3);
+            
+            //Get final registration result
+            transformation2to1 = transformation2to1.template cast<float>() * transformation2to1g.template cast<float>();
+            LOG(INFO) << "Final Registration result:" << std::endl
+                      << transformation2to1 << std::endl;
+            // LOG(INFO) << "Final Information Matrix:" << std::endl
+            //           << reg_information_matrix << std::endl;
+            pose.SetPose(transformation2to1.template cast<double>());
+        } else  {
+            LOG(ERROR) << "Registration may encounter some problem, use default transformation.";
+            
+            pose.SetPose(transformation2to1g.template cast<double>());
+        }
+
+        t2 = clock();
+#if 1   
+        //For display
+        static double trans_thre = 0.1;
+        if (code < 0 || trans_x > trans_thre || trans_x < -trans_thre || trans_y > trans_thre || trans_y < -trans_thre || trans_z > trans_thre || trans_z < -trans_thre)
+        {
+            std::shared_ptr<PointCloud> currentscan_transform_cld_ptr(new PointCloud);
+            std::shared_ptr<PointCloud> currentscan_transform_cld_ptr_reg(new PointCloud);
+            transformPointCloud(currentscan.raw_frame.cld_lidar_ptr, currentscan_transform_cld_ptr, pose2to1g);
+            transformPointCloud(currentscan.raw_frame.cld_lidar_ptr, currentscan_transform_cld_ptr_reg, pose);
+
+            MapViewer<PointType> viewer;
+            //viewer.Dispaly2Clouds(localmap.cld_feature_ptr, currentscan_transform_cld_ptr, "Initial Guess Result", 1);
+
+            //viewer.Dispaly2Clouds(localmap.cld_feature_ptr, currentscan_transform_cld_ptr_reg, "After registration", 1);
+
+            viewer.Dispaly2CloudsCompare(localmap.cld_lidar_ptr, currentscan_transform_cld_ptr,
+                                         localmap.cld_lidar_ptr, currentscan_transform_cld_ptr_reg,
+                                         "Left:before registration, Right:after registration", 1);
+
+            currentscan_transform_cld_ptr = std::shared_ptr<PointCloud>();
+            currentscan_transform_cld_ptr_reg = std::shared_ptr<PointCloud>();
+        }
+#endif
+        return true;
+    }
+
+
 
     // Pairwise registration between submaps
     bool PairwiseReg(Edge &edge, Submap &submap1, Submap &submap2) {
@@ -567,10 +702,15 @@ public:
     {
         clock_t t0, t1, t2, t3;
         t0 = clock();
-
+        
         if (!point_cloud_trgt_ptr->points.empty())
         {
             point_cloud_trgt_ptr->points.clear();
+        }
+
+        if (pose.GetMatrix()==Eigen::Matrix4d::Identity(4,4)) {
+             point_cloud_trgt_ptr=point_cloud_ori_ptr;
+             return 1;
         }
         pcl::PointCloud<pcl::PointXYZINormal>::Ptr cloud_out(new pcl::PointCloud<pcl::PointXYZINormal>);
         transformPointCloud(point_cloud_ori_ptr, cloud_out, pose);
@@ -629,7 +769,7 @@ public:
         float converge_translation = 0.0002;
         float converge_rotation = 0.01 / 180.0 * M_PI;
 
-        int ground_unground_ratio = 10;
+        int ground_unground_ratio = 20;
 
         bool successful = true;
 
@@ -2555,6 +2695,6 @@ protected:
 private:
 
 };
-} // namespace map_pose
+} // namespace lls_loam
 
-#endif // _INCLUDE_COMMON_COMMON_REG_H_
+#endif // _INCLUDE_COMMON_REG_H_

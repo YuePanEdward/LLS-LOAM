@@ -1,6 +1,11 @@
+//
+// This file is for the common implement of various basic point cloud filtering and segmentation methods
+// It would cover the downsampling, ground filter and feature point detection functions
+// Dependent 3rd Libs: PCL (>=1.7) , Eigen     
+//
 
-#ifndef _INCLUDE_COMMON_FILTER_H_
-#define _INCLUDE_COMMON_FILTER_H_
+#ifndef _INCLUDE_FILTER_H_
+#define _INCLUDE_FILTER_H_
 
 #include <pcl/point_types.h>
 #include <pcl/point_cloud.h>
@@ -17,7 +22,7 @@
 #include "map_viewer.hpp"
 #include "pca.hpp"
 
-namespace map_pose
+namespace lls_loam
 {
 
 template <typename PointT>
@@ -574,11 +579,12 @@ public:
                         if (cloud_in->points[grid[i].point_id[j]].z - grid[i].min_z < max_height_difference) {
                             // for example 5 - Downsample
                             if (j % ground_downsample_rate_first == 0) {
+                #if 0
                                 // Rough Estimate ground point normal
                                 cloud_in->points[grid[i].point_id[j]].nx = 0.0;
                                 cloud_in->points[grid[i].point_id[j]].ny = 0.0;
                                 cloud_in->points[grid[i].point_id[j]].nz = 1.0;
-
+                #endif
                                 ground_idx.push_back(grid[i].point_id[j]); // Add to ground points
 
                                 // Then downsample again for more flat ground points
@@ -648,9 +654,11 @@ public:
 
         t1 = clock();
 
+#if 1
         //Use pcl normal estimator to estimate ground points' normal instead of directly using (0,0,1)
-        // PrincipleComponentAnalysis<pcl::PointNormal> pca_estimator;
-        // pca_estimator.CalculateNormalVector_KNN(cloud_in, ground_idx, 8);
+        PrincipleComponentAnalysis<pcl::PointNormal> pca_estimator;
+        pca_estimator.CalculateNormalVector_KNN(cloud_in, ground_idx, 8);
+#endif
 
         t2 = clock();
 
@@ -1309,5 +1317,5 @@ private:
         */
 };
 
-} // namespace map_pose
+} // namespace lls_loam
 #endif //_INCLUDE_COMMON_FILTER_H_

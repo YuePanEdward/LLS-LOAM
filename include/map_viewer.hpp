@@ -1,3 +1,8 @@
+//
+// This file is for the common visualization module of GNSS&LiDAR integrated pose estimation 
+// Implemented by VTK (PCL Viewer)
+// Dependent 3rd Libs: PCL (>=1.7) With VTK, Eigen    
+//
 
 #ifndef _INCLUDE_MAP_VIEWER_H
 #define _INCLUDE_MAP_VIEWER_H
@@ -16,7 +21,7 @@
 
 #include "types.h"
 
-namespace map_pose {
+namespace lls_loam {
 
 typedef pcl::PointXYZINormal PclPointType;
 
@@ -357,7 +362,7 @@ public:
                 pt.x = Cloud1_left->points[i].x;
                 pt.y = Cloud1_left->points[i].y;
                 pt.z = Cloud1_left->points[i].z;
-                float intensity_ratio = 1.0 * Cloud1_left->points[i].intensity / 255;
+                float intensity_ratio = min_(1.2 * Cloud1_left->points[i].intensity / 255, 1.0);
                 //float intensity_ratio_kitti = 1.0 * Cloud1_left->points[i].intensity;
                 pt.r = 255 * intensity_ratio;
                 pt.g = 215 * intensity_ratio;
@@ -376,7 +381,7 @@ public:
                 pt.x = Cloud2_left->points[i].x;
                 pt.y = Cloud2_left->points[i].y;
                 pt.z = Cloud2_left->points[i].z;
-                float intensity_ratio = 1.0 * Cloud2_left->points[i].intensity / 255;
+                float intensity_ratio = min_(1.2 * Cloud2_left->points[i].intensity / 255, 1.0);
                 //float intensity_ratio_kitti = 1.0 * Cloud2_left->points[i].intensity;
                 pt.r = 233 * intensity_ratio;
                 pt.g = 233 * intensity_ratio;
@@ -792,83 +797,6 @@ public:
         }
     }
 
-    // void initialize_viewer(boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer)
-    // {
-    //     viewer->setBackgroundColor(0, 0, 0);
-    //     viewer->addCoordinateSystem(1.0);
-
-    //     viewer->registerKeyboardCallback(keyboardEventOccurred, (void *)viewer.get());
-    // }
-
-    // void keyboardEventOccurred(const pcl::visualization::KeyboardEvent &event,
-    //                            void *viewer_void)
-    // {
-    //     pcl::visualization::PCLVisualizer *viewer = static_cast<pcl::visualization::PCLVisualizer *>(viewer_void);
-    //     if (event.getKeySym() == "s" && event.keyDown())
-    //     {
-    //         std::cout << "s was pressed => stop here" << std::endl;
-
-    //         while (!viewer->wasStopped())
-    //         {
-    //             viewer->spinOnce(100);
-    //             boost::this_thread::sleep(boost::posix_time::microseconds(100000));
-    //         }
-    //     }
-    // }
-    // void initial_viewer(boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer)
-    // {
-    //     int v1 = 0;
-    //     viewer->createViewPort(0.0, 0.0, 0.75, 1.0, v1);
-    //     viewer->setBackgroundColor(0, 0, 0, v1);
-
-    //     int v2 = 1;
-    //     viewer->createViewPort(0.75, 0.0, 1.0, 1.0, v2);
-    //     viewer->setBackgroundColor(0.3, 0.3, 0.3, v2);
-    // }
-
-    void DisplayLoopClosure(boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer,
-                              const Submap &submap_first, const Submap &submap_second, const Edge &edge, int display_time_ms)
-    {
-
-        float sphere_size = 1.0;
-        //        float line_width = 1.0;
-
-        char str_edge[128];
-
-        sprintf(str_edge, "EDGE_%03u_%04u_%03u_%04u",
-                submap_first.submap_id.transaction_id, submap_first.submap_id.submap_id,
-                submap_second.submap_id.transaction_id, submap_second.submap_id.submap_id);
-
-        pcl::PointXYZ point_first(submap_first.pose.trans[0], submap_first.pose.trans[1], submap_first.pose.trans[2]);
-
-        pcl::PointXYZ point_second(submap_second.pose.trans[0], submap_second.pose.trans[1], submap_second.pose.trans[2]);
-
-        if (edge.information_matrix == Eigen::Matrix<double, 6, 6>::Zero(6, 6))
-        {
-            viewer->addLine(point_first, point_second, 1, 0, 0, str_edge);
-        }
-        else
-        {
-            switch (edge.edge_type)
-            {
-            case Edge::Intra:
-                viewer->addLine(point_first, point_second, 0, 1, 1, str_edge);
-                break;
-            case Edge::Inter:
-                viewer->addLine(point_first, point_second, 1, 0, 1, str_edge);
-                break;
-            case Edge::Adjacent:
-                viewer->addLine(point_first, point_second, 0, 0, 1, str_edge);
-                break;
-            default:
-                break;
-            }
-        }
-
-        viewer->spinOnce(display_time_ms);
-        boost::this_thread::sleep(boost::posix_time::microseconds(10000));
-    }
-
     void UpdatePoseGraph(boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer, 
                          const std::vector<Pose3d, Eigen::aligned_allocator<Pose3d>> &poses,
                          int i, bool is_wrong_edge_candidate, int display_time_ms) {
@@ -1233,7 +1161,7 @@ public:
 
         float sphere_size, line_size, line_size_origin;
 
-        sphere_size = 0.15;
+        sphere_size = 0.5;
         line_size = 0.5;
         line_size_origin = 2.0;
 
@@ -1775,7 +1703,7 @@ private:
         }
     }
     //    vector<double> global_shift;
-}; // namespace map_pose
-} // namespace map_pose
+}; 
+} // namespace lls_loam
 
 #endif //_INCLUDE_MAP_VIEWER_H

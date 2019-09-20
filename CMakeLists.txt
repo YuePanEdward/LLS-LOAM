@@ -1,7 +1,7 @@
 
 cmake_minimum_required(VERSION 2.8)
 
-project(map_pose)
+project(lls_loam)
 
 SET(CMAKE_CXX_FLAGS "-O3 -std=c++11 -w -fopenmp -pthread")
 SET(CMAKE_C_FLAGS "-O3 -std=c++11 -fopenmp -pthread")
@@ -12,6 +12,15 @@ SET(CMAKE_CXX_FLAGS_RELEASE "$ENV{CXXFLAGS} -O3 -Wall")
 
 SET(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 SET(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
+
+list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
+
+#GLOG 
+find_package(glog REQUIRED)
+
+#GFLAGS
+#Require the FindGflags.cmake (reference: ceres_solver) in the /cmake folder
+find_package(Gflags)
 
 #PCL
 FIND_PACKAGE(PCL REQUIRED)
@@ -24,16 +33,23 @@ LIST(REMOVE_ITEM PCL_LIBRARIES "vtkproj4")
 FIND_PACKAGE(OpenCV REQUIRED)
 INCLUDE_DIRECTORIES(${OpenCV_INCLUDE_DIRS})
 
+#PROJ4
+SET( PROJ4_ROOT /usr/local/include/proj )
+INCLUDE_DIRECTORIES(${PROJ4_INCLUDE_DIR}) 
+
 # head
 INCLUDE_DIRECTORIES(${PROJECT_SOURCE_DIR}/include)
+# INCLUDE_DIRECTORIES(${PROJECT_SOURCE_DIR}/deps/Sensors/include)
 
 AUX_SOURCE_DIRECTORY(${PROJECT_SOURCE_DIR}/src SRC_LIST)
 message("SRC_LIST is " ${SRC_LIST})
 
+# ADD_SUBDIRECTORY(${PROJECT_SOURCE_DIR}/deps/Sensors)
+
 # CUDA
 # ADD_SUBDIRECTORY(${PROJECT_SOURCE_DIR}/cuda)
 
-SET(DEP_LIBS ${DEP_LIBS} ${PCL_LIBRARIES} ${OpenCV_LIBS})
+SET(DEP_LIBS ${DEP_LIBS} ${PCL_LIBRARIES} ${OpenCV_LIBS} /usr/local/lib/libproj.so glog::glog ${GFLAGS_LIBRARIES})
 
 # Pure Lidar Odometry test
 add_executable(lo_test ${PROJECT_SOURCE_DIR}/samples/lidar_odometry_test.cpp ${SRC_LIST})

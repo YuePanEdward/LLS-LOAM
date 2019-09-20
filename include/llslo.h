@@ -1,3 +1,8 @@
+//
+// This file is for the front-end GNSS&LiDAR integrated pose estimation of a given transaction of data
+// Dependent 3rd Libs: PCL (>=1.7) , Eigen , Proj4   
+//
+
 #ifndef _INCLUDE_LLSLO_H_
 #define _INCLUDE_LLSLO_H_
 
@@ -12,13 +17,12 @@
 #include "filter.hpp"
 #include "common_reg.hpp"
 #include "sensors/gnssins.h"
-#include "back_end_optimization.h"
 
 // proj4
 #include <proj_api.h>
 
 
-namespace map_pose
+namespace lls_loam
 {
 
 class Transaction {
@@ -30,7 +34,7 @@ public:
     ~Transaction();
     
     // Set configure parameters, Fix it Later
-    bool SetConfig(unsigned max_frames, double rotation_accumulate, double translation_accumulate);
+    bool SetConfig(unsigned max_frames, double rotation_accumulate, double translation_accumulate, int local_map_size);
     
     // Load IMU and GNSS raw datat from PC
     bool LoadPcImuGnss(int begin_frame, int end_frame);
@@ -177,6 +181,6 @@ public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 };
 
-} // namespace map_pose
+} // namespace lls_loam
 
-#endif // _INCLUDE_TRANSACTION_H_
+#endif // _INCLUDE_LLSLO_H_

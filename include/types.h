@@ -1,3 +1,8 @@
+//
+// This file is for the common data structure for this programme
+// Dependent 3rd Libs: PCL (>=1.7), Eigen    
+//
+
 
 #ifndef _INCLUDE_TYPES_H_
 #define _INCLUDE_TYPES_H_
@@ -14,7 +19,7 @@
 #define max_(a, b) (((a) > (b)) ? (a) : (b))
 #define min_(a, b) (((a) < (b)) ? (a) : (b))
 
-namespace map_pose
+namespace lls_loam
 {
 
 struct optimization_param_t
@@ -446,6 +451,13 @@ typedef std::vector<Edge, Eigen::aligned_allocator<Edge>> VectorOfEdges;
 typedef raw_data_group_t<PointType, Pose3d> RawData;
 typedef std::vector<RawData, Eigen::aligned_allocator<RawData>> VectorOfRawDatas;
 
+enum InitialGuessType
+{
+    GNSSINSPoseDiff,
+    IMUPreintegration,
+    UniformMotion
+};
+
 template <typename PointType, typename Pose3d>
 struct submap_t
 {
@@ -567,6 +579,7 @@ struct transaction_param_t
     double rotation_accumulate;
     double translation_accumulate;
     double leaf_size;
+    int local_map_max_size;
     std::string lidar_file_list;
     std::string transaction_root_path;
     std::string lidar_root_path;
@@ -705,6 +718,6 @@ inline std::istream &operator>>(std::istream &input, bounds_t bbox)
     return input;
 }
 
-} // namespace map_pose
+} // namespace lls_loam
 
 #endif // _INCLUDE_TYPES_H_

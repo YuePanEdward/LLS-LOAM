@@ -1,3 +1,7 @@
+//
+// This file cover the data input and output methods for various formats of data
+// Dependent 3rd Libs: PCL (>=1.7) 
+//
 
 #ifndef _INCLUDE_DATA_IO_H_
 #define _INCLUDE_DATA_IO_H_
@@ -12,9 +16,8 @@
 #include <glog/logging.h>
 
 #include "types.h"
-//#include "transaction.h"
 
-namespace map_pose
+namespace lls_loam
 {
 
 typedef pcl::PointXYZINormal PclPointType;
@@ -823,6 +826,6 @@ public:
 private:
 };
 
-} // namespace map_pose
+} // namespace lls_loam
 
 #endif // _INCLUDE_DATA_IO_H_
