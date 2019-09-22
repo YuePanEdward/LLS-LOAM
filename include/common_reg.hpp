@@ -341,7 +341,7 @@ public:
         t2 = clock();
 #if 1   
         //For display
-        static double trans_thre = 0.1;
+        static double trans_thre = 0.15;
         if (code < 0 || trans_x > trans_thre || trans_x < -trans_thre || trans_y > trans_thre || trans_y < -trans_thre || trans_z > trans_thre || trans_z < -trans_thre)
         {
             std::shared_ptr<PointCloud> currentscan_transform_cld_ptr(new PointCloud);

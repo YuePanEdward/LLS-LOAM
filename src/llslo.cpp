@@ -1483,6 +1483,8 @@ bool Transaction::RunPureLidarOdometry(Submap &submap)
       
       if (config_.local_map_max_size>=2) {
       // When the input local_map_max_size < 2, the scan to map registration would not be done.
+      
+      // Update local map
 
       if (i > int(config_.local_map_max_size/2)) {
       
@@ -1501,7 +1503,8 @@ bool Transaction::RunPureLidarOdometry(Submap &submap)
           }
       }
 
-      // Update local map
+      
+
       if (i >= config_.local_map_max_size) {
          localmap.raw_data_group.erase(localmap.raw_data_group.begin());
          localmap.raw_data_group.push_back(submap.raw_data_group[i]); 

@@ -86,7 +86,7 @@ struct submap_id_t
 {
     unsigned int transaction_id;
     unsigned int submap_id;
-    unsigned int hdmap_unique_idx;
+    int hdmap_unique_idx;
 
 public:
     // store in STL sorted container (std::map std::set)
