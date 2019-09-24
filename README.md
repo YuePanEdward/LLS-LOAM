@@ -26,7 +26,7 @@ sh script/kitti/kitti_xx.sh
 ```
 
 ## How to prepare the data
-For kitti dataset, you may refer to https://github.com/YuePanEdward/kitti_bin2pcd.
+For kitti dataset, you may refer to https://github.com/YuePanEdward/Pointcloud_Format_Transformer.
 
 After transforming the point cloud from .bin to .pcd, rename the point cloud folder HDL64.
 
