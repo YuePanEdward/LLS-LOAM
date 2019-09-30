@@ -58,14 +58,41 @@ The walkaround is here: https://github.com/YuePanEdward/CloudControlNet
 
 ### On KITTI dataset
 
-![alt text](assets/kitti_00_demo.png)
+#### seq 00
+![alt text](assets/kitti_00_pointcloud.png)
 
-![alt text](assets/kitti_02_demo.png)
+#### seq 01
+![alt text](assets/kitti_01_pointcloud.png)
 
-![alt text](assets/kitti_05_demo.png)
+#### seq 02
+![alt text](assets/kitti_02_pointcloud.png)
 
-![alt text](assets/kitti_07_demo.png)
+#### seq 03
+![alt text](assets/kitti_03_pointcloud.png)
+
+#### seq 04
+![alt text](assets/kitti_04_pointcloud.png)
+
+#### seq 05
+![alt text](assets/kitti_05_pointcloud.png)
+
+#### seq 06
+![alt text](assets/kitti_06_pointcloud.png)
+
+#### seq 07
+![alt text](assets/kitti_07_pointcloud.png)
+
+#### seq 08
+![alt text](assets/kitti_08_pointcloud.png)
+
+#### seq 09
+![alt text](assets/kitti_09_pointcloud.png)
+
+#### seq 10
+![alt text](assets/kitti_10_pointcloud.png)
 
 ### On own dataset
 
-![alt text](assets/owndata_demo.png)
+![alt text](assets/demo_own_dataset_1.png)
+
+![alt text](assets/demo_own_dataset_highway.png)
