@@ -422,6 +422,8 @@ public:
     }
 
     // Two threshold Fast Ground filter
+    // Two-step adaptive Ground Filter
+    // Reference: Two-step adaptive extraction method for ground points and breaklines from lidar point clouds, Bisheng Yang, Ronggang Huang, et al. ISPRS Journal of Photogrammetry and Remote Sensing
     // 1.Construct 2D grid
     // 2.Calculate the Minimum Z value in each grid
     // 3.For each grid, if its 8 neighbor grids' Minimum Z value is less than current grid's Minimum Z minus threshold1, then all the points in current grid would be seen as unground points
@@ -579,7 +581,7 @@ public:
                         if (cloud_in->points[grid[i].point_id[j]].z - grid[i].min_z < max_height_difference) {
                             // for example 5 - Downsample
                             if (j % ground_downsample_rate_first == 0) {
-                #if 0
+                #if 1
                                 // Rough Estimate ground point normal
                                 cloud_in->points[grid[i].point_id[j]].nx = 0.0;
                                 cloud_in->points[grid[i].point_id[j]].ny = 0.0;
@@ -654,10 +656,10 @@ public:
 
         t1 = clock();
 
-#if 1
+#if 0
         //Use pcl normal estimator to estimate ground points' normal instead of directly using (0,0,1)
         PrincipleComponentAnalysis<pcl::PointNormal> pca_estimator;
-        pca_estimator.CalculateNormalVector_KNN(cloud_in, ground_idx, 8);
+        pca_estimator.CalculateNormalVector_KNN(cloud_in, ground_idx, 10);
 #endif
 
         t2 = clock();
@@ -949,50 +951,6 @@ public:
         }
     }
 
-//Two-step adaptive Ground Filter
-//Reference: Two-step adaptive extraction method for ground points and breaklines from lidar point clouds, Bisheng Yang, Ronggang Huang, et al. ISPRS Journal of Photogrammetry and Remote Sensing
-#if 0
-    bool GroundFilter(const typename pcl::PointCloud<PointT>::Ptr & cloud_in,
-                typename pcl::PointCloud<PointT>::Ptr & cloud_ground,
-                typename pcl::PointCloud<PointT>::Ptr & cloud_unground,
-                float grid_resolution, float max_height_difference) {
-            clock_t t0, t1;
-            t0=clock();
-
-            Bounds bounds;
-            CenterPoint center_pt;
-            this->getBoundAndCenter(*cloud_in , bounds , center_pt); //Inherited from its parent class, use this->
-
-            int row, col, num_grid;
-            row = ceil((bounds.max_y - bounds.min_y) / grid_resolution);
-            col = ceil((bounds.max_x - bounds.min_x) / grid_resolution);
-            num_grid = row*col;
-
-            Grid* grid = new Grid[num_grid];
-            for (int i = 0; i < num_grid; i++)
-            {
-                grid[i].min_z = FLT_MAX;
-                grid[i].NeighborMin_z = FLT_MAX;
-            }
-
-            //Preprocessing
-            preprocessing(cloud_in, bounds, row, col, num_grid, grid, grid_resolution);
-
-            //Processing
-            processing(cloud_in, cloud_ground, cloud_unground, grid, num_grid, grid_resolution, max_height_difference);
-
-            //Post processing
-            postprocessing(cloud_in, cloud_ground, cloud_unground);
-
-            delete[]grid;
-
-            t1=clock();
-
-            cout << "Ground Filter done in " << float(t1 - t0) / CLOCKS_PER_SEC << " s" << endl;
-
-            return 1;
-        }
-#endif
 
     //Get Bound and Center of a Point Cloud
     void getBoundAndCenter(const point_cloud_t<PointT> &cloud,
@@ -1067,254 +1025,6 @@ private:
         getCloudBound(*temp_cloud, bound);
     }
 
-    /*
-        //Construct the grid
-        void preprocessing(const typename pcl::PointCloud<PointT>::Ptr & cloud_in, Bounds & bounds,
-                           int row, int col, int num_voxel, Grid* grid, float grid_resolution)
-        {
-            int temp_num_voxel, ExpandGrid_Col, ExpandGrid_Row;
-            ExpandGrid_Col = col + 2;
-            ExpandGrid_Row = row + 2;
-            temp_num_voxel = ExpandGrid_Row*ExpandGrid_Col;
-            Grid *temp_grid = new Grid[temp_num_voxel];
-
-            for (int i = 0; i < cloud_in->points.size(); i++)
-            {
-                int temp_row, temp_list, temp_id;
-                temp_list = floor((cloud_in->points[i].x - bounds.min_x) / grid_resolution);
-                temp_row = floor((cloud_in->points[i].y - bounds.min_y) / grid_resolution);
-                temp_id = temp_row * col + temp_list;
-                if (temp_id >= 0 && temp_id < num_grid)
-                {
-                    grid[temp_id].point_id.push_back(i);
-                    grid[temp_id].PointsNumber++;
-                    if (cloud_in->points[i].z < grid[temp_id].min_z)
-                    {
-                        grid[temp_id].min_z = cloud_in->points[i].z;
-                        grid[temp_id].NeighborMin_z = cloud_in->points[i].z;
-                    }
-                }
-            }
-
-            for (int i = 0; i < num_grid; i++)
-            {
-                //Ok .fix it later. It's too ...
-                int ExpandGrid_TempRow, ExpandGrid_TempCol, ExpandGrid_Temp_id;
-                ExpandGrid_TempRow = i / col + 1;
-                ExpandGrid_TempCol =i % col + 1;
-                ExpandGrid_Temp_id = ExpandGrid_TempRow*ExpandGrid_Col + ExpandGrid_TempCol;
-                temp_grid[ExpandGrid_Temp_id].min_z = grid[i].min_z;
-                if (ExpandGrid_TempCol == 1 || ExpandGrid_TempRow == 1 || ExpandGrid_TempCol == col || ExpandGrid_TempRow == row)
-                {
-                    if (ExpandGrid_TempCol == 1)
-                    {
-                        temp_grid[ExpandGrid_Temp_id - 1].min_z = grid[i].min_z;
-                        if (ExpandGrid_TempRow == 1)
-                            temp_grid[ExpandGrid_Temp_id - 1 - ExpandGrid_Col].min_z = grid[i].min_z;
-                    }
-                    else
-                    {
-                        if (ExpandGrid_TempCol == col)
-                        {
-                            temp_grid[ExpandGrid_Temp_id + 1].min_z = grid[i].min_z;
-                            if (ExpandGrid_TempRow == row)
-                                temp_grid[ExpandGrid_Temp_id + 1 + ExpandGrid_Col].min_z = grid[i].min_z;
-                        }
-                    }
-                    if (ExpandGrid_TempRow == 1)
-                    {
-                        temp_grid[ExpandGrid_Temp_id - ExpandGrid_Col].min_z = grid[i].min_z;
-                        if (ExpandGrid_TempCol == col)
-                            temp_grid[ExpandGrid_Temp_id + 1 - ExpandGrid_Col].min_z = grid[i].min_z;
-                    }
-                    else
-                    {
-                        if (ExpandGrid_TempRow == row)
-                        {
-                            temp_grid[ExpandGrid_Temp_id + ExpandGrid_Col].min_z = grid[i].min_z;
-                            if (ExpandGrid_TempCol == 1)
-                                temp_grid[ExpandGrid_Temp_id - 1 + ExpandGrid_TempCol].min_z = grid[i].min_z;
-
-                        }
-                    }
-                }
-            }
-
-            for (int i = 0; i < num_grid; i++)
-            {
-                int ExpandGrid_TempRow, ExpandGrid_TempCol, ExpandGrid_Temp_id;
-                ExpandGrid_TempRow = i / col + 1;
-                ExpandGrid_TempCol = i % col + 1;
-                ExpandGrid_Temp_id = ExpandGrid_TempRow * ExpandGrid_Col + ExpandGrid_TempCol;
-                for (int j = -1; j < 2; j++) //Col
-                {
-                    for (int k = -1; k<2; k++) //row
-                    {
-                        if (grid[i].NeighborMin_z > temp_grid[ExpandGrid_Temp_id + j*ExpandGrid_Col + k].min_z && (j != 0 || k != 0))
-                            grid[i].NeighborMin_z = temp_grid[ExpandGrid_Temp_id + j*ExpandGrid_Col + k].min_z;
-                    }
-                }
-            }
-            delete[] temp_grid;
-        }
-
-        //Two threshold ground filtering
-        void processing(const typename pcl::PointCloud<PointT>::Ptr & cloud_in,
-                        typename pcl::PointCloud<PointT>::Ptr & cloud_ground,
-                        typename pcl::PointCloud<PointT>::Ptr & cloud_unground,
-                        Grid* grid, int num_voxel, float grid_resolution, float max_height_difference)
-        {
-            for (int i = 0; i < num_grid; i++)
-            {
-                if (grid[i].min_z - grid[i].NeighborMin_z < 2 * grid_resolution)
-                {
-                    for (int j = 0; j < grid[i].point_id.size(); j++)
-                    {
-                        if (cloud_in->points[grid[i].point_id[j]].z - grid[i].min_z < max_height_difference) //Add to ground points
-                        {
-                            cloud_ground->points.push_back(cloud_in->points[grid[i].point_id[j]]);
-                        }
-                        else //Add to nonground points
-                        {
-                            cloud_unground->points.push_back(cloud_in->points[grid[i].point_id[j]]);
-                        }
-                    }
-                }
-                else //Add to nonground points
-                {
-                    for (int j = 0; j < grid[i].point_id.size(); j++)  {cloud_unground->points.push_back(cloud_in->points[grid[i].point_id[j]]);}
-                }
-            }
-        }
-
-        // Some of the ground points would be selected and push into the non-ground points
-        void postprocessing(const typename pcl::PointCloud<PointT>::Ptr & cloud_in,
-                            typename pcl::PointCloud<PointT>::Ptr & cloud_ground,
-                            typename pcl::PointCloud<PointT>::Ptr & cloud_unground)
-
-        {
-            typename pcl::PointCloud<PointT>::Ptr temp_ground_cloud(new typename pcl::PointCloud<PointT>());
-            std::vector<int> is_ground_points;
-
-            PointT groundpointsTotempgroudpoints;
-
-            for (int i = 0; i < cloud_ground->points.size(); i++)
-            {
-                groundpointsTotempgroudpoints = cloud_ground->points[i];
-                temp_ground_cloud->push_back(groundpointsTotempgroudpoints);
-                is_ground_points.push_back(i);
-            }
-            cloud_ground->clear();
-
-            std::set<int, less<int> > Unsearch;
-            std::set<int, less<int> >::iterator iterUnsearch;
-
-            std::vector<int> isearse;
-
-            for (int i = 0; i < temp_ground_cloud->points.size(); i++)
-            {
-                isearse.push_back(i);
-                Unsearch.insert(i);
-            }
-
-            pcl::KdTreeFLANN<PointT> Kdtree_search_ground_cloud;
-            pcl::KdTreeFLANN<PointT> Kdtree_search_cloud;
-
-            Kdtree_search_ground_cloud.setInputCloud(temp_ground_cloud);
-            Kdtree_search_cloud.setInputCloud(cloud_in);
-
-            //Radius search
-            float radius = 1.0;
-            std::vector<int>PointIdSearch_ground_cloud;
-            std::vector<float>PointDistanceSearch_ground_cloud;
-            std::vector<int>PointIdSearch_cloud;
-            std::vector<float>PointDistanceSearch_cloud;
-
-            PointT Searchpoint;
-            int Pointsub;
-
-            while (!Unsearch.empty()) //Still some points not searched
-            {
-                iterUnsearch = Unsearch.begin();
-                Pointsub = *iterUnsearch;
-                Searchpoint = temp_ground_cloud->points[Pointsub];
-                Kdtree_search_ground_cloud.radiusSearch(Searchpoint, radius, PointIdSearch_ground_cloud, PointDistanceSearch_ground_cloud); //Radius search
-                Unsearch.erase(Pointsub); // Erase from the set
-
-                //Empricial Settings
-                if (PointIdSearch_ground_cloud.size() < 5)  //Less than 5 ground points in 1 meter neighborhood
-                {
-                    if (isearse[Pointsub] != -1)  //->non ground
-                    {
-                        is_ground_points[Pointsub] = -2;
-                        isearse[Pointsub] = -1;
-                    }
-                }
-                else
-                {
-                    if (PointIdSearch_ground_cloud.size() > 10) //More than 10 ground points in 1 meter neighborhood // keep ground
-                    {
-                        for (int i = 0; i < PointIdSearch_ground_cloud.size(); i++)
-                        {
-                            if (isearse[PointIdSearch_ground_cloud[i]] != -1)
-                            {
-                                Unsearch.erase(PointIdSearch_ground_cloud[i]); // Neighborhood ground points erased from the search set
-                                isearse[PointIdSearch_ground_cloud[i]] = -1;
-                            }
-                        }
-                    }
-                    else //   >=5 && <=10
-                    {
-                        Kdtree_search_cloud.radiusSearch(Searchpoint, radius, PointIdSearch_cloud, PointDistanceSearch_cloud); //Search All the points (ground and unground)
-                        if (PointIdSearch_cloud.size() > 2 * PointIdSearch_ground_cloud.size()) // Non-ground more than ground
-                        {
-                            for (int i = 0; i < PointIdSearch_ground_cloud.size(); i++)
-                            {
-                                if (isearse[PointIdSearch_ground_cloud[i]] != -1)
-                                {
-                                    is_ground_points[PointIdSearch_ground_cloud[i]] = -1;   // Neighborhood ground points -> non ground
-                                    Unsearch.erase(PointIdSearch_ground_cloud[i]);          // Neighborhood ground points erased from the search set
-                                    isearse[PointIdSearch_ground_cloud[i]] = -1;
-                                }
-                            }
-                        }
-                        else //Ground more than non-ground
-                        {
-                            if (isearse[Pointsub] != -1)  // keep ground
-                            {
-                                //Unsearch.erase(Pointsub);
-                                isearse[Pointsub] = -1;
-                            }
-                        }
-                    }
-                }
-            }
-
-            //Free the memory
-            isearse.clear();
-            vector<int>().swap(isearse);
-            PointIdSearch_cloud.clear();
-            vector<int>().swap(PointIdSearch_cloud);
-            PointDistanceSearch_cloud.clear();
-            vector<float>().swap(PointDistanceSearch_cloud);
-            PointIdSearch_ground_cloud.clear();
-            vector<int>().swap(PointIdSearch_ground_cloud);
-            PointDistanceSearch_ground_cloud.clear();
-            vector<float>().swap(PointDistanceSearch_ground_cloud);
-
-            for (int i = 0; i < temp_ground_cloud->points.size(); i++)
-            {
-                if (is_ground_points[i]<0) // -2 definitly -1 bordeline
-                {cloud_unground->points.push_back(temp_ground_cloud->points[i]);}
-                else
-                {cloud_ground->push_back(temp_ground_cloud->points[i]);}
-            }
-            temp_ground_cloud->clear();
-            pcl::PointCloud<PointT>().swap(*temp_ground_cloud);
-            is_ground_points.clear();
-            vector<int>().swap(is_ground_points);
-        }
-        */
 };
 
 } // namespace lls_loam

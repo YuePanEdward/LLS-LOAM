@@ -91,6 +91,22 @@ The walkaround is here: https://github.com/YuePanEdward/CloudControlNet
 #### seq 10
 ![alt text](assets/kitti_10_pointcloud.png)
 
+#### Quantity Evaluation on KITTI dataset
+
+| seq | ATE | ARE | TPF |
+|-----|-----|-----|-----|
+| 00  | 1.426     | 0.603    | 193.4    |
+| 01  |           |          |          |
+| 02  | 2.210     | 0.928    | 196.8    |
+| 03  | 1.282     | 1.037    | 181.5    |
+| 04  | 2.108     | 0.981    | 194.3    |
+| 05  | 1.453     | 0.677    | 189.3    |
+| 06  | 1.119     | 0.609    | 188.6    |
+| 07  | 0.763     | 0.505    | 198.1    |
+| 08  | 1.834     | 0.800    | 187.4    |
+| 09  | 2.293     | 1.008    | 191.2    |
+| 10  | 2.771     | 0.905    | 190.4    |
+
 ### On own dataset
 
 ![alt text](assets/demo_own_dataset_1.png)

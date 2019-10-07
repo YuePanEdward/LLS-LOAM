@@ -258,10 +258,10 @@ public:
         clock_t t1, t2;
 
         int max_iter_num = 6;
-        float thre_dis_ground = 1.0f;
-        float thre_dis_edge = 0.8f;
-        float thre_dis_planar = 0.8f;
-        float thre_dis_sphere = 0.7f;
+        float thre_dis_ground = 0.5f;
+        float thre_dis_edge = 0.5f;
+        float thre_dis_planar = 0.5f;
+        float thre_dis_sphere = 0.5f;
 
         //LOG(INFO) << "submap1.cld_lidar_ptr size " << submap1.cld_lidar_ptr->points.size();
         //LOG(INFO) << "submap2.cld_lidar_ptr size " << submap2.cld_lidar_ptr->points.size();
@@ -341,7 +341,7 @@ public:
         t2 = clock();
 #if 1   
         //For display
-        static double trans_thre = 0.15;
+        static double trans_thre = 0.2;
         if (code < 0 || trans_x > trans_thre || trans_x < -trans_thre || trans_y > trans_thre || trans_y < -trans_thre || trans_z > trans_thre || trans_z < -trans_thre)
         {
             std::shared_ptr<PointCloud> currentscan_transform_cld_ptr(new PointCloud);
@@ -991,12 +991,7 @@ public:
         float balance_ratio = 1.0 * (*Corr_Ground).size() / ((*Corr_Planar).size() + (*Corr_Edge).size() + (*Corr_Sphere).size());
         int Corr_total_num = (*Corr_Ground).size() + (*Corr_Planar).size() + (*Corr_Edge).size() + (*Corr_Sphere).size();
 
-        w_ground = 2.0 / balance_ratio;
-        //  w_planar = 3.0;
-        //  w_edge_x=1.0;
-        //  w_edge_y=1.0;
-        //  w_edge_z=0.5;
-        w_sphere = 1.0;
+        w_ground = 3.0 / balance_ratio;
 
         //LOG(INFO) << "Begin accumulation";
         //Ground to Ground (Plane to Plane)
@@ -1085,8 +1080,8 @@ public:
                 // if (i % 100 == 0)
                 //     LOG(INFO) << "Normal (x,y,z): " << ntx << "," << nty << "," << ntz;
 
-                if (Corr_total_num < 20000)
-                    w_planar = 1.0 + 1.0 * min_(sqrt(qx * qx + qy * qy) / 8.0, 2.0); //distance weighted  //1.0 ~ 3.0  [Frame to frame reg]
+                if (Corr_total_num < 15000)
+                    w_planar = 1.0 + 1.0 * min_(sqrt(qx * qx + qy * qy) / 20.0, 2.0); //distance weighted  //1.0 ~ 3.0  [Frame to frame reg]
                 else
                     w_planar = 2.0;
                 float w = w_planar;
@@ -1166,13 +1161,13 @@ public:
 
                 float wx, wy, wz;
 
-                if (Corr_total_num < 20000)
-                    wx = 0.5 + 0.5 * min_(sqrt(qx * qx + qy * qy) / 16.0, 1.0); //1.5 - 3  [Frame to Frame Reg, Distance Weighted]
+                if (Corr_total_num < 15000)
+                    wx = 0.5 + 0.5 * min_(sqrt(qx * qx + qy * qy) / 40.0, 1.0); //1.5 - 3  [Frame to Frame Reg, Distance Weighted]
                 else
                     wx = 0.8;
 
                 wy = wx;
-                wz = 0.8 * wx;
+                wz = 0.5 * wx;
 
                 float dx = px - qx;
                 float dy = py - qy;
@@ -1272,6 +1267,12 @@ public:
                 float qx = Target_Sphere->points[t_index].x;
                 float qy = Target_Sphere->points[t_index].y;
                 float qz = Target_Sphere->points[t_index].z;
+
+                if (Corr_total_num < 15000)
+                    w_sphere = 0.5 + 0.5 * min_(sqrt(qx * qx + qy * qy) / 40.0, 1.0); //1.5 - 3  [Frame to Frame Reg, Distance Weighted]
+                else
+                    w_sphere = 0.8;
+
                 float wx = w_sphere;
                 float wy = w_sphere;
                 float wz = w_sphere;
@@ -1279,7 +1280,7 @@ public:
                 float dx = px - qx;
                 float dy = py - qy;
                 float dz = pz - qz;
-
+           
                 //    0  1  2  3  4  5
                 //    6  7  8  9 10 11
                 //   12 13 14 15 16 17

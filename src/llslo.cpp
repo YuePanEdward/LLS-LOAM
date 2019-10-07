@@ -775,7 +775,8 @@ bool Transaction::SubmapOdom(Submap &submap)
                 
             }
         }
-
+        
+        //if (i > 1) {
         if (i > int(config_.local_map_max_size/2)) {
             // Merge the frames of the local map
             MergeFrames(localmap);
@@ -1276,7 +1277,7 @@ bool Transaction::RunPureLidarOdometry(Submap &submap)
     // Parameters List (add it to config later)
 
     // Distance Filter
-    float xy_max = 40.0; // xy_max is the filter radius, points outside the circle would be deleted (unit:m)
+    float xy_max = 45.0; // xy_max is the filter radius, points outside the circle would be deleted (unit:m)
     float z_min = -2.8;  // z_min is used to filter some noise underground points (unit:m)
     float z_max = 30.0;  // z_max is used to filter some noise unground points (unit:m)
 
@@ -1284,7 +1285,7 @@ bool Transaction::RunPureLidarOdometry(Submap &submap)
     // gf_min_grid_num is the min point number in a grid. those grid whose point number < gf_min_grid_num would be ignored  
     int gf_min_grid_num = 10;
     // gf_grid_resolution is the size of a grid (unit:m)               
-    float gf_grid_resolution = 0.75;
+    float gf_grid_resolution = 0.7;
     // points whose [(z - min_z of the grid) > gf_max_grid_height_diff] would be regarded as unground points (unit:m)
     float gf_max_grid_height_diff = 0.15;
     // grids whose [(z_min - z_min of the grid's 8 neighbor grids) > gf_neighbor_height_diff would be regarded as unground grids (unit:m)
@@ -1292,13 +1293,13 @@ bool Transaction::RunPureLidarOdometry(Submap &submap)
     // points whose z is larger than gf_max_ground_height would be regarded as unground points whatever (unit:m)  
     float gf_max_ground_height = 1.0;
     // gf_downsample_rate_nonground is the random downsample ratio of detected unground points [the downsample is for efficiency concerning]
-    int gf_downsample_rate_nonground = 4;
+    int gf_downsample_rate_nonground = 3;
     // only gf_downsample_grid_number_first points would be randomly selected as the ground points in a grid
     // This group of ground points are used for registration [target ground points (more point number)] 
-    int gf_downsample_grid_number_first = 2;  
+    int gf_downsample_grid_number_first = 4;  
     // only gf_downsample_grid_number_second points would be randomly selected as the ground points in a grid
     // This group of ground points are used for registration [source ground points (less point number)] 
-    int gf_downsample_grid_number_second = 1; 
+    int gf_downsample_grid_number_second = 2; 
 
     // Feature Points Detection
     // Search neighbor_search_K nearest neighbor for doing neighbor PCA 
@@ -1316,13 +1317,13 @@ bool Transaction::RunPureLidarOdometry(Submap &submap)
     // planarty threshold of planar feature points for registration [target planar points (more point number)] 
     float neighbor_planar_thre_target = 0.55;
     // curvature threshold of sphere feature points for registration [target sphere points (more point number)] 
-    float neighbor_curvature_thre_target = 0.2;
+    float neighbor_curvature_thre_target = 0.25;
     // linearty threshold of edge feature points for registration [source edge points (less point number)] 
     float neighbor_linear_thre_source = 0.75;
     // planarty threshold of planar feature points for registration [source planar points (less point number)] 
     float neighbor_planar_thre_source = 0.75;
     // curvature threshold of sphere feature points for registration [source sphere points (less point number)] 
-    float neighbor_curvature_thre_source = 0.25;
+    float neighbor_curvature_thre_source = 0.3;
     // edge_point_source_appro_num points with larger linearity would be regarded as source edge points (less point number)
     int edge_point_source_appro_num = 400;   
     // planar_point_source_appro_num points with larger planarity would be regarded as source planar points (less point number)
@@ -1485,7 +1486,7 @@ bool Transaction::RunPureLidarOdometry(Submap &submap)
       // When the input local_map_max_size < 2, the scan to map registration would not be done.
       
       // Update local map
-
+      //if (i > 1) {
       if (i > int(config_.local_map_max_size/2)) {
       
           // Merge the frames of the local map
