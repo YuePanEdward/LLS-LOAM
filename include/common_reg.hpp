@@ -93,10 +93,10 @@ public:
     int PairwiseReg(RawData &group1, RawData &group2, Pose3d &pose, InitialGuessType initial_type) {
         
         int max_iter_num = 12;
-        float thre_dis_ground = 0.75f;
-        float thre_dis_edge = 0.75f;
-        float thre_dis_planar = 0.75f;
-        float thre_dis_sphere = 0.6f;
+        float thre_dis_ground = 0.7f; 
+        float thre_dis_edge = 0.65f;   
+        float thre_dis_planar = 0.65f; 
+        float thre_dis_sphere = 0.55f;  
 
         // Preprocessing: Initialize Feature Point Cloud (Fix it later by removing pcl dependency)
         pcl::PointCloud<PointT>::Ptr Source_Ground(new pcl::PointCloud<PointT>);
@@ -329,6 +329,7 @@ public:
             transformation2to1 = transformation2to1.template cast<float>() * transformation2to1g.template cast<float>();
             LOG(INFO) << "Final Registration result:" << std::endl
                       << transformation2to1 << std::endl;
+
             // LOG(INFO) << "Final Information Matrix:" << std::endl
             //           << reg_information_matrix << std::endl;
             pose.SetPose(transformation2to1.template cast<double>());
@@ -341,8 +342,9 @@ public:
         t2 = clock();
 #if 1   
         //For display
-        static double trans_thre = 0.2;
-        if (code < 0 || trans_x > trans_thre || trans_x < -trans_thre || trans_y > trans_thre || trans_y < -trans_thre || trans_z > trans_thre || trans_z < -trans_thre)
+        static double trans_thre = 0.4;
+        if (transformation2to1(0, 3)<trans_thre && transformation2to1(1, 3)<trans_thre && transformation2to1(2, 3)<trans_thre)
+        //if (code < 0 || trans_x > trans_thre || trans_x < -trans_thre || trans_y > trans_thre || trans_y < -trans_thre || trans_z > trans_thre || trans_z < -trans_thre)
         {
             std::shared_ptr<PointCloud> currentscan_transform_cld_ptr(new PointCloud);
             std::shared_ptr<PointCloud> currentscan_transform_cld_ptr_reg(new PointCloud);

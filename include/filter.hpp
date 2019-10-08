@@ -581,7 +581,7 @@ public:
                         if (cloud_in->points[grid[i].point_id[j]].z - grid[i].min_z < max_height_difference) {
                             // for example 5 - Downsample
                             if (j % ground_downsample_rate_first == 0) {
-                #if 1
+                #if 0
                                 // Rough Estimate ground point normal
                                 cloud_in->points[grid[i].point_id[j]].nx = 0.0;
                                 cloud_in->points[grid[i].point_id[j]].ny = 0.0;
@@ -656,7 +656,7 @@ public:
 
         t1 = clock();
 
-#if 0
+#if 1
         //Use pcl normal estimator to estimate ground points' normal instead of directly using (0,0,1)
         PrincipleComponentAnalysis<pcl::PointNormal> pca_estimator;
         pca_estimator.CalculateNormalVector_KNN(cloud_in, ground_idx, 10);

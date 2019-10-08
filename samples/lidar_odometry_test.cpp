@@ -44,7 +44,7 @@ int main(int argc, char **argv)
     trsct_prm.submap_full_root_path = FLAGS_transaction_folder + "/SubmapFull_" + FLAGS_exp_num;
     trsct_prm.submap_feature_root_path = FLAGS_transaction_folder + "/SubmapFeature_" + FLAGS_exp_num;
     //Key parameter to set
-    trsct_prm.local_map_max_size=0; //Local map's max frame number 
+    trsct_prm.local_map_max_size=10; //Local map's max frame number 
 
     lls_loam::Transaction transaction(trsct_prm);
 

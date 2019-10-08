@@ -1283,7 +1283,7 @@ bool Transaction::RunPureLidarOdometry(Submap &submap)
 
     // Ground Filter (Segment Ground and Unground points)
     // gf_min_grid_num is the min point number in a grid. those grid whose point number < gf_min_grid_num would be ignored  
-    int gf_min_grid_num = 10;
+    int gf_min_grid_num = 9;
     // gf_grid_resolution is the size of a grid (unit:m)               
     float gf_grid_resolution = 0.7;
     // points whose [(z - min_z of the grid) > gf_max_grid_height_diff] would be regarded as unground points (unit:m)
@@ -1293,7 +1293,7 @@ bool Transaction::RunPureLidarOdometry(Submap &submap)
     // points whose z is larger than gf_max_ground_height would be regarded as unground points whatever (unit:m)  
     float gf_max_ground_height = 1.0;
     // gf_downsample_rate_nonground is the random downsample ratio of detected unground points [the downsample is for efficiency concerning]
-    int gf_downsample_rate_nonground = 3;
+    int gf_downsample_rate_nonground = 2;
     // only gf_downsample_grid_number_first points would be randomly selected as the ground points in a grid
     // This group of ground points are used for registration [target ground points (more point number)] 
     int gf_downsample_grid_number_first = 4;  
@@ -1309,9 +1309,9 @@ bool Transaction::RunPureLidarOdometry(Submap &submap)
     // linearty a_1d = (e1-e2)/e1 , planarity a_2d = (e2-e3)/e1 , curvature = e3/(e1+e2+e3)
     int neighbor_search_K = 8;
     // Those candidate edge points whose primary direction's z component < linear_vertical_cosine_min would be rejected
-    float linear_vertical_cosine_min = 0.75;
+    float linear_vertical_cosine_min = 0.7;
     // Those candidate planar points whose normal direction's z component > planar_horizontal_cosine_max would be rejected
-    float planar_horizontal_cosine_max = 0.4;
+    float planar_horizontal_cosine_max = 0.45;
     // linearty threshold of edge feature points for registration [target edge points (more point number)] 
     float neighbor_linear_thre_target = 0.6;
     // planarty threshold of planar feature points for registration [target planar points (more point number)] 
@@ -1453,7 +1453,7 @@ bool Transaction::RunPureLidarOdometry(Submap &submap)
             LOG(INFO) << "*** SCAN TO SCAN REGISTRATION ***";
 
             int code = reg_.PairwiseReg(submap.raw_data_group[i - 1],
-                             submap.raw_data_group[i], pose2to1, UniformMotion);
+                             submap.raw_data_group[i], pose2to1, UniformMotion);  //GNSSINSPoseDiff
             if (code == 1 || code == -4 ) { // Successful (1) or  Absolutely failed (-4) 
                submap.raw_data_group[i].raw_frame.last_transform.copyFrom(pose2to1);
                //Get frame's lidar odometry pose

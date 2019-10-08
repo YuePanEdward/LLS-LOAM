@@ -50,13 +50,15 @@ The walkaround is here: https://github.com/YuePanEdward/CloudControlNet
 
 1.Speed up
 
-2.Weighting
+2.Solve the serious Z drift problem
 
 3.Add ROS module
 
 ## Demo
 
 ### On KITTI dataset
+
+#### Yellow: Lidar Odometry Position, Purple: Ground Truth Position
 
 #### seq 00
 ![alt text](assets/kitti_00_pointcloud.png)
@@ -93,10 +95,10 @@ The walkaround is here: https://github.com/YuePanEdward/CloudControlNet
 
 #### Quantity Evaluation on KITTI dataset
 
-| seq | ATE | ARE | TPF |
+| seq | ATE(%) | ARE(0.01deg/m) | TPF(ms/frame) |
 |-----|-----|-----|-----|
-| 00  | 1.426     | 0.603    | 193.4    |
-| 01  |           |          |          |
+| 00  | 1.362     | 0.603    | 193.4    |
+| 01  | 4.175     | 1.076    | 183.8    |
 | 02  | 2.210     | 0.928    | 196.8    |
 | 03  | 1.282     | 1.037    | 181.5    |
 | 04  | 2.108     | 0.981    | 194.3    |
@@ -105,7 +107,7 @@ The walkaround is here: https://github.com/YuePanEdward/CloudControlNet
 | 07  | 0.763     | 0.505    | 198.1    |
 | 08  | 1.834     | 0.800    | 187.4    |
 | 09  | 2.293     | 1.008    | 191.2    |
-| 10  | 2.771     | 0.905    | 190.4    |
+| 10  | 2.692     | 0.905    | 190.4    |
 
 ### On own dataset
 
