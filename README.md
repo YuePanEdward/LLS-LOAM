@@ -46,7 +46,7 @@ For your own dataset, if the point cloud are in pcd format and the pose and imu 
 
 0.For the loop closure and pose graph optimization module, the code is not released.
 
-The walkaround is here: https://github.com/YuePanEdward/CloudControlNet (dev branch)
+The workaround is here: https://github.com/YuePanEdward/CloudControlNet (dev branch)
 
 1.Speed up
 
