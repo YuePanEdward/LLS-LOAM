@@ -1336,7 +1336,7 @@ bool Transaction::RunPureLidarOdometry(Submap &submap)
 
     // Ground Filter (Segment Ground and Unground points)
     // gf_min_grid_num is the min point number in a grid. those grid whose point number < gf_min_grid_num would be ignored  
-    int gf_min_grid_num = 9;
+    int gf_min_grid_num = 10;
     // gf_grid_resolution is the size of a grid (unit:m)               
     float gf_grid_resolution = 0.7;
     // points whose [(z - min_z of the grid) > gf_max_grid_height_diff] would be regarded as unground points (unit:m)
@@ -1349,10 +1349,10 @@ bool Transaction::RunPureLidarOdometry(Submap &submap)
     int gf_downsample_rate_nonground = 2;
     // only gf_downsample_grid_number_first points would be randomly selected as the ground points in a grid
     // This group of ground points are used for registration [target ground points (more point number)] 
-    int gf_downsample_grid_number_first = 4;  
+    int gf_downsample_grid_number_first = 2;  
     // only gf_downsample_grid_number_second points would be randomly selected as the ground points in a grid
     // This group of ground points are used for registration [source ground points (less point number)] 
-    int gf_downsample_grid_number_second = 2; 
+    int gf_downsample_grid_number_second = 1; 
 
     // Feature Points Detection
     // Search neighbor_search_K nearest neighbor for doing neighbor PCA 
@@ -1378,9 +1378,9 @@ bool Transaction::RunPureLidarOdometry(Submap &submap)
     // curvature threshold of sphere feature points for registration [source sphere points (less point number)] 
     float neighbor_curvature_thre_source = 0.3;
     // edge_point_source_appro_num points with larger linearity would be regarded as source edge points (less point number)
-    int edge_point_source_appro_num = 400;   
+    int edge_point_source_appro_num = 500;   
     // planar_point_source_appro_num points with larger planarity would be regarded as source planar points (less point number)
-    int planar_point_source_appro_num = 400; 
+    int planar_point_source_appro_num = 500; 
     // sphere_point_source_appro_num points with larger curvature would be regarded as source sphere points (less point number)
     int sphere_point_source_appro_num = 50;  
     

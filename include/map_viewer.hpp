@@ -1184,8 +1184,8 @@ public:
             //minz2 = minz + 2;
         // } //Set Color Ramp
         
-        maxz2=30;
-        minz2=-30;
+        maxz2=15;
+        minz2=-15;
 
 
         mini = 0;

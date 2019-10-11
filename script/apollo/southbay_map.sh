@@ -1,4 +1,4 @@
-transaction_root_path=/media/edward/BackupPlus/Data/Apollo/SouthBay/samples/TestData/BaylandsToSeafood/2018-10-12
+transaction_root_path=/media/edward/BackupPlus/Data/Apollo/SouthBay/samples/MapData/BaylandsToSeafood/2018-09-26
 exp_num=apollo_000
 #gdb --args \
 ./bin/lo_test_apollo \
@@ -11,5 +11,5 @@ exp_num=apollo_000
 --pcd_filelist=${transaction_root_path}/file_list.txt  \
 --exp_num=${exp_num} \
 --begin_frame_id=1000 \
---end_frame_id=3000
-#max_frame_number 7537
+--end_frame_id=2000
+#max_frame_number 36303
