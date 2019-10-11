@@ -72,6 +72,8 @@ The workaround is here: [CloudControlNet](https://github.com/YuePanEdward/CloudC
 
 - [ ] Solve the serious Z drift problem
 
+- [ ] Use DL to remove the dynamic objects
+
 - [ ] Add ROS module
 
 - [ ] Tech report or paper
