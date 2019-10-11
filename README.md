@@ -22,6 +22,8 @@ cd ..
 # If you'd like to test on kitti dataset
 # See below for data preparation
 sh script/kitti/kitti_xx.sh
+# If you'd like to test on apollo southbay dataset
+sh script/apollo/southbay_test.sh
 # If you'd like to test on your own dataset, you need to create new shell files and then run it
 ```
 
@@ -39,6 +41,8 @@ ls HDL64 >> file_list.txt
 ```
 
 Then the data is ready for test.
+
+For Baidu Appollo Dataset, you should download the testing data 'Apollo-SouthBay' from http://data.apollo.auto/?locale=en-us&lang=en. The data preparation is like kitti's. Remember to use the tool 'rename_number_pcd_files.sh' to regularize the pcd file names.
 
 For your own dataset, if the point cloud are in pcd format and the pose and imu information are in oxts format, then you can directly use this programme (LoadPcImuGnss Method). Or you need to transform the data youself.
 
@@ -108,6 +112,10 @@ The walkaround is here: https://github.com/YuePanEdward/CloudControlNet (dev bra
 | 08  | 1.834     | 0.800    | 187.4    |
 | 09  | 2.293     | 1.008    | 191.2    |
 | 10  | 2.692     | 0.905    | 190.4    |
+
+### Apollo SouthBay dataset
+
+![alt text](assets/southbay_test_1.png)
 
 ### On own dataset
 

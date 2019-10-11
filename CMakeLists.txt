@@ -6,8 +6,8 @@ project(lls_loam)
 SET(CMAKE_CXX_FLAGS "-O3 -std=c++11 -w -fopenmp -pthread")
 SET(CMAKE_C_FLAGS "-O3 -std=c++11 -fopenmp -pthread")
 
-SET(CMAKE_BUILD_TYPE "Debug") 
-SET(CMAKE_CXX_FLAGS_DEBUG "$ENV{CXXFLAGS} -O0 -Wall -g -ggdb")
+#SET(CMAKE_BUILD_TYPE "Debug") 
+#SET(CMAKE_CXX_FLAGS_DEBUG "$ENV{CXXFLAGS} -O0 -Wall -g -ggdb")
 SET(CMAKE_CXX_FLAGS_RELEASE "$ENV{CXXFLAGS} -O3 -Wall")
 
 SET(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
@@ -52,6 +52,8 @@ message("SRC_LIST is " ${SRC_LIST})
 SET(DEP_LIBS ${DEP_LIBS} ${PCL_LIBRARIES} ${OpenCV_LIBS} /usr/local/lib/libproj.so glog::glog ${GFLAGS_LIBRARIES})
 
 # Pure Lidar Odometry test
-add_executable(lo_test ${PROJECT_SOURCE_DIR}/samples/lidar_odometry_test.cpp ${SRC_LIST})
-target_link_libraries(lo_test ${DEP_LIBS})
+add_executable(lo_test_kitti ${PROJECT_SOURCE_DIR}/samples/lidar_odometry_test_kitti.cpp ${SRC_LIST})
+target_link_libraries(lo_test_kitti ${DEP_LIBS})
 
+add_executable(lo_test_apollo ${PROJECT_SOURCE_DIR}/samples/lidar_odometry_test_apollo.cpp ${SRC_LIST})
+target_link_libraries(lo_test_apollo ${DEP_LIBS})

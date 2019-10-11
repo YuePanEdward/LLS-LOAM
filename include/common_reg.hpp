@@ -340,11 +340,11 @@ public:
         }
 
         t2 = clock();
-#if 1   
+#if 0   
         //For display
         static double trans_thre = 0.4;
-        if (transformation2to1(0, 3)<trans_thre && transformation2to1(1, 3)<trans_thre && transformation2to1(2, 3)<trans_thre)
-        //if (code < 0 || trans_x > trans_thre || trans_x < -trans_thre || trans_y > trans_thre || trans_y < -trans_thre || trans_z > trans_thre || trans_z < -trans_thre)
+        //if (transformation2to1(0, 3)<trans_thre && transformation2to1(1, 3)<trans_thre && transformation2to1(2, 3)<trans_thre)
+        if (code < 0 || trans_x > trans_thre || trans_x < -trans_thre || trans_y > trans_thre || trans_y < -trans_thre || trans_z > trans_thre || trans_z < -trans_thre)
         {
             std::shared_ptr<PointCloud> currentscan_transform_cld_ptr(new PointCloud);
             std::shared_ptr<PointCloud> currentscan_transform_cld_ptr_reg(new PointCloud);

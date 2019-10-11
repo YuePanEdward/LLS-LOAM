@@ -394,6 +394,31 @@ public:
         tmp_file.close();
         return 1;
     }
+    
+    // For Apollo Ground Truth pose 
+    bool GetPoseFromFile(std::string &file_string, std::vector<pose_qua_t, Eigen::aligned_allocator<pose_qua_t> > &pose_vec) {
+        std::ifstream tmp_file(file_string);
+        pose_vec.clear();
+        std::string line;
+        if (tmp_file.is_open()) {
+            while (getline(tmp_file, line)) {
+                int temp_index;
+                double temp_time;
+                pose_qua_t temp_pose;
+                std::istringstream in(line);
+
+                in>>temp_index>>temp_time>>temp_pose;
+                pose_vec.push_back(temp_pose);
+            }
+        }
+        else {
+             std::cout << "Unable to open input file" << std::endl;
+             return 0;
+        }
+        tmp_file.close();
+        return 1;
+    }
+
 
 
     bool ReadIMUData(const std::string &fileName, std::vector<std::vector<imu_info_t>> &imu_datas)

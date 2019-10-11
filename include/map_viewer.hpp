@@ -1165,19 +1165,28 @@ public:
         line_size = 0.5;
         line_size_origin = 2.0;
 
+
+        // float origin_x=submap.pose.trans(0);
+        // float origin_y=submap.pose.trans(1);
+        // float origin_z=submap.pose.trans(2);
+
         float maxz, minz, maxz2, minz2, c_value, maxi, mini;
         float red_v = 1.0;
         float green_v = 1.0;
         float blue_v = 0.0;
 
         //Get bounding box data
-        maxz = submap.bbox.max_z;
-        minz = submap.bbox.min_z;
-        if ((maxz - minz) > 8)
-        {
-            maxz2 = maxz - 6;
-            minz2 = minz + 2;
-        } //Set Color Ramp
+        //maxz = submap.bbox.max_z;
+        //minz = submap.bbox.min_z;
+        //if ((maxz - minz) > 8)
+        //{
+           // maxz2 = maxz - 4;
+            //minz2 = minz + 2;
+        // } //Set Color Ramp
+        
+        maxz2=30;
+        minz2=-30;
+
 
         mini = 0;
         maxi = 255.0;

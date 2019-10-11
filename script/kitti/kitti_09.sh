@@ -1,7 +1,7 @@
 transaction_root_path=/media/edward/BackupPlus/Data/kitti-dataset/sequences/09
 exp_num=kitti_009
 #gdb --args \
-./bin/lo_test \
+./bin/lo_test_kitti \
 --colorlogtostderr=true \
 -stderrthreshold 0 \
 -log_dir ./log \

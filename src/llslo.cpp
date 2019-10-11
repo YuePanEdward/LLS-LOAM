@@ -1173,6 +1173,59 @@ bool Transaction::AddNoise(RawData &raw_data_group, float noise_std_t, float noi
     return 1;
 }
 
+// Load Baidu Apollo SouthBay Datasets' data for LO test
+void Transaction::LoadApolloData(int begin_frame, int end_frame) {
+    
+    frame_number_= end_frame-begin_frame+1;  
+
+    // Import pose
+    std::vector<pose_qua_t, Eigen::aligned_allocator<pose_qua_t> > pose_vec ;
+   
+    std::string pose_file=oxts_root_path_+"/gt_poses.txt" ;
+    LOG(INFO)<<"Import Pose Data.";
+    data_loader_.GetPoseFromFile(pose_file, pose_vec);
+    
+    // Import pcd point cloud
+    std::vector<std::string> pcd_filenames;
+
+    std::ifstream lidar_file_list(pcd_list_path_);
+    if (!lidar_file_list.is_open()) {
+        LOG(ERROR) << "open lidar_file_list failed, file is " << pcd_list_path_;
+    }
+   
+    while (lidar_file_list.peek() != EOF){
+        std::string cur_file;
+        lidar_file_list >> cur_file;
+        pcd_filenames.push_back(cur_file);   
+    }
+    
+    raw_datas_.resize(frame_number_);
+
+    double global_position_shift_x=-pose_vec[begin_frame].trans(0);
+    double global_position_shift_y=-pose_vec[begin_frame].trans(1);
+
+    // Assign Raw data
+    for (int i=begin_frame; i<= end_frame; i++)
+    {
+        //Translate the beginning frame's position to map origin
+        pose_vec[i].trans(0)+=global_position_shift_x;
+        pose_vec[i].trans(1)+=global_position_shift_y;
+        raw_datas_[i-begin_frame].raw_gnss.pose.copyFrom(pose_vec[i]); 
+        raw_datas_[i-begin_frame].raw_frame.pcd_file_name=pcd_filenames[i];
+    } 
+    
+    Submap apollo_submap;
+    apollo_submap.pose.copyFrom(raw_datas_[0].raw_gnss.pose);
+    apollo_submap.frame_number = frame_number_;
+    apollo_submap.raw_data_group.insert(apollo_submap.raw_data_group.end(),raw_datas_.begin(),raw_datas_.end());
+    apollo_submap.raw_data_group[0].raw_frame.last_transform.trans(0)+=0.5; //The first frame's motion estimate [This one is according to kitti dataset's property]
+    sub_maps_.push_back(apollo_submap);
+
+}
+
+
+
+
 // Load KITTI Datasets' data for LO test
 void Transaction::LoadKITTIData(int begin_frame, int end_frame) {
     
@@ -1222,7 +1275,7 @@ void Transaction::LoadKITTIData(int begin_frame, int end_frame) {
     } 
     
     Submap kitti_submap;
-    kitti_submap.pose=raw_datas_[begin_frame].raw_gnss.pose;
+    kitti_submap.pose.copyFrom(raw_datas_[0].raw_gnss.pose);
     kitti_submap.frame_number = frame_number_;
     kitti_submap.raw_data_group.insert(kitti_submap.raw_data_group.end(),raw_datas_.begin(),raw_datas_.end());
     kitti_submap.raw_data_group[0].raw_frame.last_transform.trans(0)+=0.5; //The first frame's motion estimate [This one is according to kitti dataset's property]
@@ -1344,9 +1397,12 @@ bool Transaction::RunPureLidarOdometry(Submap &submap)
     std::shared_ptr<PointCloud> pointcloud_lidar_filtered(new PointCloud);
     std::vector<unsigned int> cld_unground_index;
     
-    //submap.raw_data_group[0].raw_frame.pose.copyFrom(submap.pose);
-    submap.raw_data_group[0].raw_frame.pose.SetPose(Eigen::Matrix4d::Identity(4,4));
+    submap.raw_data_group[0].raw_frame.pose.copyFrom(submap.pose);
+    //submap.raw_data_group[0].raw_frame.pose.SetPose(Eigen::Matrix4d::Identity(4,4));
     
+    //LOG(ERROR)<<"Initial GNSS pose: "<<submap.pose;
+    //LOG(ERROR)<<"Initial LO pose: "<<submap.raw_data_group[0].raw_frame.pose;
+
     // Local map
     Submap localmap;
     localmap.init();
@@ -1363,7 +1419,7 @@ bool Transaction::RunPureLidarOdometry(Submap &submap)
         
         pointcloud_lidar_filtered = std::make_shared<PointCloud>();
         std::vector<unsigned int>().swap(cld_unground_index);
-
+        
         submap.raw_data_group[i].raw_frame.ground_index.clear();
         submap.raw_data_group[i].raw_frame.ground_down_index.clear();
         submap.raw_data_group[i].raw_frame.edge_index.clear();
@@ -1386,7 +1442,7 @@ bool Transaction::RunPureLidarOdometry(Submap &submap)
         
         LOG(INFO)<<"*** *** PREPROCESSING *** ***";
         // Import cloud
-        submap.raw_data_group[i].raw_frame.init();
+        if(i>0) submap.raw_data_group[i].raw_frame.init();
         data_loader_.readPcdFile(lidar_root_path_ + "/" + submap.raw_data_group[i].raw_frame.pcd_file_name,
                                  submap.raw_data_group[i].raw_frame.cld_lidar_ptr, 1); //tag 1 for Point XYZI type
 
@@ -1453,7 +1509,7 @@ bool Transaction::RunPureLidarOdometry(Submap &submap)
             LOG(INFO) << "*** SCAN TO SCAN REGISTRATION ***";
 
             int code = reg_.PairwiseReg(submap.raw_data_group[i - 1],
-                             submap.raw_data_group[i], pose2to1, UniformMotion);  //GNSSINSPoseDiff
+                             submap.raw_data_group[i], pose2to1, GNSSINSPoseDiff);  //GNSSINSPoseDiff  //UniformMotion
             if (code == 1 || code == -4 ) { // Successful (1) or  Absolutely failed (-4) 
                submap.raw_data_group[i].raw_frame.last_transform.copyFrom(pose2to1);
                //Get frame's lidar odometry pose
@@ -1547,9 +1603,6 @@ bool Transaction::RunPureLidarOdometry(Submap &submap)
     //Merge the frames to the submap
     //MergeFrames(submap);
 
-    //Use the submap's cloud in world frame to calculate bounding box
-    //filter_.getCloudBound(*submap.cld_lidar_ptr, submap.bbox);
-
     //Evaluate the accuracy
     submap.submap_mae = GetMae(submap);
 
@@ -1571,6 +1624,7 @@ bool Transaction::RunPureLidarOdometry(Submap &submap)
                                  submap.raw_data_group[i].raw_frame.pose);
         frame_pointcloud_temp->points.swap(submap.raw_data_group[i].raw_frame.cld_lidar_ptr->points);
         frame_pointcloud_temp = std::make_shared<PointCloud>();
+        
     }
     
     frame_pointcloud_temp = std::make_shared<PointCloud>();
@@ -1585,7 +1639,7 @@ bool Transaction::RunPureLidarOdometry(Submap &submap)
 #if 1 //Display submap \
     
     //For display submap (convert submap's frame cloud to world coordinate system according to lidar odom pose)
-    viewer_.DisplaySubmapClouds(submap, "LO Lidar Frame (Yellow) ; OXTS Lidar Frame (Purple) ; OXTS Body Frame (Cyan)", INTENSITY, 1);
+    viewer_.DisplaySubmapClouds(submap, "LO Lidar Frame (Yellow) ; OXTS Lidar Frame (Purple) ; OXTS Body Frame (Cyan)", HEIGHT, 1);
     
     //Free the memory
 

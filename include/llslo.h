@@ -67,6 +67,9 @@ public:
     // Load KITTI Datasets' data for LO test
     void LoadKITTIData(int begin_frame, int end_frame);
 
+    // Load KITTI Datasets' data for LO test
+    void LoadApolloData(int begin_frame, int end_frame);
+
     // Pure Lidar Odometry Entrance (For Lidar Odometry Test)
     void PureLidarOdometry();
     
