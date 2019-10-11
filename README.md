@@ -1,6 +1,10 @@
 # LLS-LOAM
 Lidar Odometry and Mapping with Mutiple Metrics Linear Least Square ICP
 
+## Principle
+Instead of using non-linear optimization when doing transformation estimation, this algorithm use the linear least square for all of the point-to-point, point-to-line and point-to-plane distance metrics during the ICP registration process. 
+
+
 ## How to use
 
 1. Install dependent 3rd libraries: 
@@ -46,17 +50,32 @@ For Baidu Appollo Dataset, you should download the testing data 'Apollo-SouthBay
 
 For your own dataset, if the point cloud are in pcd format and the pose and imu information are in oxts format, then you can directly use this programme (LoadPcImuGnss Method). Or you need to transform the data youself.
 
+The common folder structure should be
+```
+-----base_folder
+---------HDL64
+-------------0000.pcd
+-------------0001.pcd
+-------------....pcd
+---------OXTS
+-------------pose.txt
+---------file_list.txt
+```
+
 ## TO DO LIST
 
-0.For the loop closure and pose graph optimization module, the code is not released.
+For the loop closure, pose graph optimization and collaboration mapping module, the code has not been released yet.
 
 The workaround is here: [CloudControlNet](https://github.com/YuePanEdward/CloudControlNet/tree/dev)
 
-1.Speed up
+- [ ] Speed up
 
-2.Solve the serious Z drift problem
+- [ ] Solve the serious Z drift problem
 
-3.Add ROS module
+- [ ] Add ROS module
+
+- [ ] Tech report or paper
+
 
 ## Demo
 
