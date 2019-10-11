@@ -1184,8 +1184,8 @@ public:
             //minz2 = minz + 2;
         // } //Set Color Ramp
         
-        maxz2=15;
-        minz2=-15;
+        maxz2=submap.pose.trans(2)+12.0;
+        minz2=submap.pose.trans(2)-12.0;
 
 
         mini = 0;
