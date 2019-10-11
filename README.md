@@ -52,14 +52,14 @@ For your own dataset, if the point cloud are in pcd format and the pose and imu 
 
 The common folder structure should be
 ```
------base_folder
----------HDL64
--------------0000.pcd
--------------0001.pcd
--------------....pcd
----------OXTS
--------------pose.txt
----------file_list.txt
+_____base_folder
+     |___HDL64
+     .   |____0000.pcd
+     .   |____0001.pcd
+     .   |____.....pcd
+     |___OXTS
+     .   |____pose.txt
+     |___file_list.txt
 ```
 
 ## TO DO LIST
