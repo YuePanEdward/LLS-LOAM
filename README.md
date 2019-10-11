@@ -28,7 +28,7 @@ sh script/apollo/southbay_test.sh
 ```
 
 ## How to prepare the data
-For kitti dataset, you may refer to [Pointcloud Format Transform Tool]https://github.com/YuePanEdward/Pointcloud_Format_Transformer.
+For kitti dataset, you may refer to [Pointcloud Format Transform Tool](https://github.com/YuePanEdward/Pointcloud_Format_Transformer).
 
 After transforming the point cloud from .bin to .pcd, rename the point cloud folder HDL64.
 
@@ -42,7 +42,7 @@ ls HDL64 >> file_list.txt
 
 Then the data is ready for test.
 
-For Baidu Appollo Dataset, you should download the testing data 'Apollo-SouthBay' from [Baidu Apollo Data Platform] http://data.apollo.auto/?locale=en-us&lang=en. The data preparation is like kitti's. Remember to use the tool 'rename_number_pcd_files.sh' to regularize the pcd file names (for example, from 1.pcd to 0001.pcd).
+For Baidu Appollo Dataset, you should download the testing data 'Apollo-SouthBay' from [Baidu Apollo Data Platform](http://data.apollo.auto/?locale=en-us&lang=en). The data preparation is like kitti's. Remember to use the tool 'rename_number_pcd_files.sh' to regularize the pcd file names (for example, from 1.pcd to 0001.pcd).
 
 For your own dataset, if the point cloud are in pcd format and the pose and imu information are in oxts format, then you can directly use this programme (LoadPcImuGnss Method). Or you need to transform the data youself.
 
@@ -50,7 +50,7 @@ For your own dataset, if the point cloud are in pcd format and the pose and imu 
 
 0.For the loop closure and pose graph optimization module, the code is not released.
 
-The workaround is here: CloudControlNet[https://github.com/YuePanEdward/CloudControlNet/tree/dev]
+The workaround is here: [CloudControlNet](https://github.com/YuePanEdward/CloudControlNet/tree/dev)
 
 1.Speed up
 
