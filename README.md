@@ -10,7 +10,7 @@ Instead of using non-linear optimization when doing transformation estimation, t
 1. Install dependent 3rd libraries: 
 PCL, OpenCV, Eigen, VTK, Glog, Gflags.
 
-If you'd like to use your own data and want to know its absolute projected coordinate, install Proj.
+ If you'd like to use your own data and want to know its absolute projected coordinate, install Proj.
 
 2. Compile
 ```
@@ -32,7 +32,7 @@ sh script/apollo/southbay_test.sh
 ```
 
 ## How to prepare the data
-For kitti dataset, you may refer to [Pointcloud Format Transform Tool](https://github.com/YuePanEdward/Pointcloud_Format_Transformer).
+For [KITTI dataset](http://www.cvlibs.net/datasets/kitti/eval_odometry.php), you may refer to [Pointcloud Format Transform Tool](https://github.com/YuePanEdward/Pointcloud_Format_Transformer).
 
 After transforming the point cloud from .bin to .pcd, rename the point cloud folder HDL64.
 
