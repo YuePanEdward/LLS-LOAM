@@ -10,6 +10,6 @@ exp_num=apollo_000
 --transaction_folder=${transaction_root_path} \
 --pcd_filelist=${transaction_root_path}/file_list.txt  \
 --exp_num=${exp_num} \
---begin_frame_id=1000 \
---end_frame_id=2000
+--begin_frame_id=3000 \
+--end_frame_id=4500
 #max_frame_number 36303

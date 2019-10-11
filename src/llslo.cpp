@@ -1330,13 +1330,13 @@ bool Transaction::RunPureLidarOdometry(Submap &submap)
     // Parameters List (add it to config later)
 
     // Distance Filter
-    float xy_max = 45.0; // xy_max is the filter radius, points outside the circle would be deleted (unit:m)
+    float xy_max = 50.0; // xy_max is the filter radius, points outside the circle would be deleted (unit:m)
     float z_min = -2.8;  // z_min is used to filter some noise underground points (unit:m)
     float z_max = 30.0;  // z_max is used to filter some noise unground points (unit:m)
 
     // Ground Filter (Segment Ground and Unground points)
     // gf_min_grid_num is the min point number in a grid. those grid whose point number < gf_min_grid_num would be ignored  
-    int gf_min_grid_num = 10;
+    int gf_min_grid_num = 9;
     // gf_grid_resolution is the size of a grid (unit:m)               
     float gf_grid_resolution = 0.7;
     // points whose [(z - min_z of the grid) > gf_max_grid_height_diff] would be regarded as unground points (unit:m)

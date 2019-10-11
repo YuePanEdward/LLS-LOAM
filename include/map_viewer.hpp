@@ -1245,9 +1245,9 @@ public:
                     case HEIGHT: //Height ramp color scalar
                     {
                         c_value = min_(max_(pt.z - minz2, 0) / (maxz2 - minz2), 1);
-                        pt.r = 255 * c_value;
-                        pt.g = 255 * (1.0 - c_value);
-                        pt.b = 50 + 150 * c_value;
+                        pt.r = 255.0 * c_value;
+                        pt.g = 255.0 * (1.0 - c_value);
+                        pt.b = 50 + 150.0 * c_value;
                         break;
                     }
                     case FRAME: //Random color for each frame
