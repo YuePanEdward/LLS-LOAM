@@ -89,8 +89,8 @@ public:
     // return code -- code=1::success; code=-1::Total correspondence number is too small; code=-2::Too little Non-ground features found;
     // code=-3::Too little Ground features found; code=-4::Too large translation or rotation for one iteration
     // Fix it later using try - catch
-    //! WARNING: RawData.noise_gnss.pose will be used as initial guess, make sure it is INIT correctly before you call this function
-    int PairwiseReg(RawData &group1, RawData &group2, Pose3d &pose, InitialGuessType initial_type) {
+    //! WARNING: FrameData.noise_gnss.pose will be used as initial guess, make sure it is INIT correctly before you call this function
+    int PairwiseReg(FrameData &group1, FrameData &group2, Pose3d &pose, InitialGuessType initial_type) {
         
         int max_iter_num = 12;
         float thre_dis_ground = 0.7f; 
@@ -245,7 +245,7 @@ public:
     }
 
     // Pairwise registration between frames by initial guess
-    bool PairwiseInitialGuess(RawData &group1, RawData &group2) {
+    bool PairwiseInitialGuess(FrameData &group1, FrameData &group2) {
         Pose3d pose2to1g(group1.noise_gnss.pose.quat.conjugate() * group2.noise_gnss.pose.quat,
                          group1.noise_gnss.pose.quat.conjugate() * (group2.noise_gnss.pose.trans - group1.noise_gnss.pose.trans));
         Eigen::Matrix4d transformation2to1 = pose2to1g.GetMatrix();
@@ -254,7 +254,7 @@ public:
     }
     
     // Scan to local map registration
-    bool PairwiseReg(Submap &localmap, RawData &currentscan, Pose3d &pose) {
+    bool PairwiseReg(Submap &localmap, FrameData &currentscan, Pose3d &pose) {
         clock_t t1, t2;
 
         int max_iter_num = 6;
@@ -520,7 +520,7 @@ public:
 
 // Test it 
 #if 0
-    bool InitialGuessByIMUPreintergration(RawData & last_frame_data, Eigen::Vector3d & initial_velocity, Eigen::Matrix4d & initial_guess)
+    bool InitialGuessByIMUPreintergration(FrameData & last_frame_data, Eigen::Vector3d & initial_velocity, Eigen::Matrix4d & initial_guess)
     {
         //Use fixed time step  //Fix it later
         double dt = 0.01; //unit:s

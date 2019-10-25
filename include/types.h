@@ -22,50 +22,6 @@
 namespace lls_loam
 {
 
-struct optimization_param_t
-{
-    std::string trust_region_strategy = "levenberg_marquardt";
-    std::string linear_solver = "dense_schur";
-    std::string sparse_linear_algebra_library = "suite_sparse";
-    std::string dense_linear_algebra_library = "eigen";
-
-    std::string ordering; // marginalization ..
-
-    bool robustify = true; // loss function
-    std::string loss_function;
-
-    // double eta;
-    int num_threads = 1; // default = 1
-    int num_iterations = 10;
-
-    std::string pose_graph_input_file = "";
-    std::string pose_graph_output_folder = "";
-    std::string pose_graph_output_file = "";
-    std::string pose_graph_output_calib_file = "";
-    std::vector<std::string> transaction_lidar_root_path;
-
-    double submap_upper_bound_x = 0.2;
-    double submap_upper_bound_y = 0.2;
-    double submap_upper_bound_z = 5;
-    double submap_lower_bound_x = 0.2;
-    double submap_lower_bound_y = 0.2;
-    double submap_lower_bound_z = 5;
-    double calib_upper_bound_x = 0.1;
-    double calib_upper_bound_y = 0.1;
-    double calib_upper_bound_z = 0.1;
-    double calib_lower_bound_x = 0.1;
-    double calib_lower_bound_y = 0.1;
-    double calib_lower_bound_z = 0.1;
-};
-
-struct loop_detection_param_t
-{
-    double distance;    // distance between submap center points
-    double cross_ratio; // cross parts between two point cloud boundingboxes (IoU)
-    unsigned int revisit_min_id_interval;
-    unsigned int revisit_max_edge_per_submap;
-};
-
 struct center_point_t
 {
     double x, y, z;
@@ -355,10 +311,7 @@ struct point_cloud_t
 template <typename PointType, typename Pose3d>
 struct frame_t
 {
-    //    unsigned int unique_id;
-    //    unsigned int transaction_id;
-    //    unsigned int id_in_transaction;
-    //    unsigned int submap_id;
+    
     unsigned int id_in_submap;
     std::string pcd_file_name; // e.g. HDL_64_*.pcd
     bounds_t bbox;
@@ -415,7 +368,7 @@ struct frame_t
 };
 
 template <typename PointType, typename Pose3d>
-struct raw_data_group_t
+struct frame_data_group_t
 {
     // A raw data group consists of:
     // 1 -- frame
@@ -448,8 +401,8 @@ typedef gnss_t<Pose3d> Gnss;
 typedef std::map<submap_id_t, Gnss, std::less<submap_id_t>, Eigen::aligned_allocator<std::pair<const submap_id_t, Gnss>>> MapOfGnsses;
 typedef edge_t<Pose3d> Edge;
 typedef std::vector<Edge, Eigen::aligned_allocator<Edge>> VectorOfEdges;
-typedef raw_data_group_t<PointType, Pose3d> RawData;
-typedef std::vector<RawData, Eigen::aligned_allocator<RawData>> VectorOfRawDatas;
+typedef frame_data_group_t<PointType, Pose3d> FrameData;
+typedef std::vector<FrameData, Eigen::aligned_allocator<FrameData>> VectorOfFrameDatas;
 
 enum InitialGuessType
 {
@@ -475,7 +428,7 @@ struct submap_t
     bounds_t bbox;
     center_point_t center_point;
     double submap_mae;
-    VectorOfRawDatas raw_data_group;        
+    VectorOfFrameDatas raw_data_group;        
     std::shared_ptr<point_cloud_t<PointType>> cld_lidar_ptr;   // downsampled point cloud in Submap
     std::shared_ptr<point_cloud_t<PointType>> cld_feature_ptr; // feature pointcloud
     std::vector<unsigned int> ground_index; 
@@ -501,9 +454,9 @@ struct submap_t
         center_point = center_point_t();
         pose = Pose3d();
     }
-    void releaseRawData()
+    void releaseFrameData()
     {
-        VectorOfRawDatas().swap(raw_data_group);
+        VectorOfFrameDatas().swap(raw_data_group);
     }
     void releaseIndex()
     {
@@ -527,7 +480,7 @@ struct submap_t
         //init();
         release_cld_lidar();
         releaseIndex();
-        releaseRawData();
+        releaseFrameData();
     }
 };
 

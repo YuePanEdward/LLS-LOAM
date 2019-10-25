@@ -82,8 +82,8 @@ private:
     bool MergeFrameBounds(Submap &submap); 
  
     // Add noise to raw gnss 's pose of the LiDAR coordinate system , Fix it Later
-    // Input: a given RawData (1 frame's data), translation noise, rotation noise
-    bool AddNoise(RawData &raw_data_group, float noise_std_t, float noise_std_r);
+    // Input: a given FrameData (1 frame's data), translation noise, rotation noise
+    bool AddNoise(FrameData &raw_data_group, float noise_std_t, float noise_std_r);
     
     // Get the heading angle change within one frame (10 imu data) using Trapezoidal integral of imu heading angular velocity
     // Input: vector of imu_datas within a frame and the sample time of imu in second
@@ -151,9 +151,9 @@ public:
     // Adjacent edges in the transaction (no Loop Edge)
     VectorOfEdges adjacent_edges_;
  
-    // RawData is group of useful raw data(PointCloud, GNSS, IMU) [1 raw data per frame]
+    // FrameData is group of useful raw data(PointCloud, GNSS, IMU) [1 raw data per frame]
     // but it may take up too much memory, it should be released after submaps are constructed 
-    VectorOfRawDatas raw_datas_;
+    VectorOfFrameDatas raw_datas_;
 
     // Calibration Matrix (Fix it, put it in the config file later)
     Pose3d calib_ldr_to_oxts_; // Tbl (b: body frame, l: lidar frame)

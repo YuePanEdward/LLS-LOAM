@@ -316,8 +316,8 @@ bool Transaction::LoadPcImuGnss(int begin_frame, int end_frame) {
         }
 
         // Goup together
-        RawData raw_data;
-        raw_data.flag = RawData::UNDEAL;
+        FrameData raw_data;
+        raw_data.flag = FrameData::UNDEAL;
         raw_data.raw_frame = raw_frame;
         raw_data.raw_gnss = raw_gnss;
         raw_data.raw_imu = raw_imu_infos;
@@ -807,7 +807,7 @@ bool Transaction::SubmapOdom(Submap &submap)
     // Free Local Map's memory
     localmap.release_cld_lidar();
     localmap.releaseIndex();
-    localmap.releaseRawData();
+    localmap.releaseFrameData();
 
     // Free memory
     std::vector<PointType>().swap(pointcloud_lidar_filtered->points);
@@ -1104,7 +1104,7 @@ bool Transaction::ReleaseSubmapCld(int submap_id){
     }
     sub_maps_[submap_id].release_cld_lidar();
     sub_maps_[submap_id].releaseIndex();
-    sub_maps_[submap_id].releaseRawData();
+    sub_maps_[submap_id].releaseFrameData();
     return true;
 }
 
@@ -1112,14 +1112,14 @@ bool Transaction::ReleaseAllSubmaps(){
     for (size_t i = 0; i < sub_maps_.size(); ++i){
         sub_maps_[i].release_cld_lidar();
         sub_maps_[i].releaseIndex();
-        sub_maps_[i].releaseRawData();
+        sub_maps_[i].releaseFrameData();
     }
     return true;
 }
 
 // Add noise to raw gnss 's pose of the LiDAR coordinate system , Fix it Later
-// Input: a given RawData (1 frame's data), translation noise, rotation noise
-bool Transaction::AddNoise(RawData &raw_data_group, float noise_std_t, float noise_std_r){
+// Input: a given FrameData (1 frame's data), translation noise, rotation noise
+bool Transaction::AddNoise(FrameData &raw_data_group, float noise_std_t, float noise_std_r){
     //const float mean_t=0.0, mean_r=0.0;
     //const float mean_tx=0.0, mean_ty=0.0, mean_tz=0.0;
 
@@ -1648,7 +1648,7 @@ bool Transaction::RunPureLidarOdometry(Submap &submap)
     // Free Local Map's memory
     localmap.release_cld_lidar();
     localmap.releaseIndex();
-    localmap.releaseRawData();
+    localmap.releaseFrameData();
 
     return true;
 }
