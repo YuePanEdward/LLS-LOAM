@@ -2,15 +2,16 @@
 Lidar Odometry and Mapping with Mutiple Metrics Linear Least Square ICP
 
 ## Principle
-Instead of using non-linear optimization when doing transformation estimation, this algorithm use the linear least square for all of the point-to-point, point-to-line and point-to-plane distance metrics during the ICP registration process. 
+Instead of using non-linear optimization when doing transformation estimation, this algorithm use the linear least square for all of the point-to-point, point-to-line and point-to-plane distance metrics during the ICP registration process based on a good enough initial guess. 
 
 
 ## How to use
 
 1. Install dependent 3rd libraries: 
-PCL, OpenCV, Eigen, VTK, Glog, Gflags.
 
- If you'd like to use your own data and want to know its absolute projected coordinate, install Proj.
+[PCL](https://github.com/PointCloudLibrary/pcl), [OpenCV](https://github.com/opencv/opencv), [Eigen](https://eigen.tuxfamily.org/dox/), [Glog](https://github.com/google/glog), [Gflags](https://github.com/gflags/gflags).
+
+If you'd like to use your own data and want to know its absolute projected coordinate, install [Proj](https://proj.org/download.html).
 
 2. Compile
 ```

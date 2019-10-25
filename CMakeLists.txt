@@ -52,8 +52,8 @@ message("SRC_LIST is " ${SRC_LIST})
 SET(DEP_LIBS ${DEP_LIBS} ${PCL_LIBRARIES} ${OpenCV_LIBS} /usr/local/lib/libproj.so glog::glog ${GFLAGS_LIBRARIES})
 
 # Pure Lidar Odometry test
-add_executable(lo_test_kitti ${PROJECT_SOURCE_DIR}/samples/lidar_odometry_test_kitti.cpp ${SRC_LIST})
+add_executable(lo_test_kitti ${PROJECT_SOURCE_DIR}/test/lidar_odometry_test_kitti.cpp ${SRC_LIST})
 target_link_libraries(lo_test_kitti ${DEP_LIBS})
 
-add_executable(lo_test_apollo ${PROJECT_SOURCE_DIR}/samples/lidar_odometry_test_apollo.cpp ${SRC_LIST})
+add_executable(lo_test_apollo ${PROJECT_SOURCE_DIR}/test/lidar_odometry_test_apollo.cpp ${SRC_LIST})
 target_link_libraries(lo_test_apollo ${DEP_LIBS})
