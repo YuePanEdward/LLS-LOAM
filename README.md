@@ -9,7 +9,7 @@ Instead of using non-linear optimization when doing transformation estimation, t
 
 1. Install dependent 3rd libraries: 
 
-[PCL](https://github.com/PointCloudLibrary/pcl), [OpenCV](https://github.com/opencv/opencv), [Eigen](https://eigen.tuxfamily.org/dox/), [Glog](https://github.com/google/glog), [Gflags](https://github.com/gflags/gflags).
+[PCL](https://github.com/PointCloudLibrary/pcl), [Eigen](https://eigen.tuxfamily.org/dox/), [Glog](https://github.com/google/glog), [Gflags](https://github.com/gflags/gflags).
 
 If you'd like to use your own data and want to know its absolute projected coordinate, install [Proj](https://proj.org/download.html).
 

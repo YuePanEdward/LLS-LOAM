@@ -13,10 +13,9 @@
 #include <pcl/point_cloud.h>
 #include <pcl/kdtree/kdtree_flann.h>
 #include <pcl/segmentation/extract_clusters.h>
+#include <pcl/common/pca.h>
 
-//opencv2
-#include <opencv2/core/types_c.h>
-#include <opencv2/core/core_c.h>
+//Remove the opencv dependence
 
 //our
 #include <types.h>
@@ -235,9 +234,7 @@ public:
 			features[i].ptId = i;
 			features[i].ptNum = search_indices.size();
 			CalculatePcaFeature(inputPointCloud, search_indices, features[i]);
-			// inputPointCloud->points[i].normal_x =  features[i].vectors.normalDirection.x();
-			// inputPointCloud->points[i].normal_y =  features[i].vectors.normalDirection.y();
-			// inputPointCloud->points[i].normal_z =  features[i].vectors.normalDirection.z();
+			
 		}
 		//});
 
@@ -245,7 +242,7 @@ public:
 	}
 
 	/**
-		* \brief Use OpenCV to accomplish the Principle Component Analysis (PCA)
+		* \brief Use PCL to accomplish the Principle Component Analysis (PCA)
 		* of one point and its neighborhood
 		* \param[in] inputPointCloud is the input Point Cloud Pointer
 		* \param[in] search_indices is the neighborhood points' indices of the search point.
@@ -257,39 +254,30 @@ public:
 	{
 		size_t ptNum;
 		ptNum = search_indices.size();
-
+        
 		if (ptNum < 3)
 			return false;
-
-		CvMat *pData = cvCreateMat(ptNum, 3, CV_32FC1);
-		CvMat *pMean = cvCreateMat(1, 3, CV_32FC1);
-		CvMat *pEigVals = cvCreateMat(1, 3, CV_32FC1);
-		CvMat *pEigVecs = cvCreateMat(3, 3, CV_32FC1);
-
-		for (size_t i = 0; i < ptNum; ++i)
+        
+        
+		typename pcl::PointCloud<Point_T>::Ptr selected_cloud (new pcl::PointCloud<Point_T>());
+        for (size_t i = 0; i < ptNum; ++i)
 		{
-			cvmSet(pData, i, 0, inputPointCloud->points[search_indices[i]].x);
-			cvmSet(pData, i, 1, inputPointCloud->points[search_indices[i]].y);
-			cvmSet(pData, i, 2, inputPointCloud->points[search_indices[i]].z);
+			selected_cloud->points.push_back(inputPointCloud->points[search_indices[i]]);
 		}
+        
+        pcl::PCA<Point_T> pca_operator;
+	    pca_operator.setInputCloud(selected_cloud);
 
-		cvCalcPCA(pData, pMean, pEigVals, pEigVecs, CV_PCA_DATA_AS_ROW);
-
-		feature.vectors.principalDirection.x() = cvmGet(pEigVecs, 0, 0);
-		feature.vectors.principalDirection.y() = cvmGet(pEigVecs, 0, 1);
-		feature.vectors.principalDirection.z() = cvmGet(pEigVecs, 0, 2);
-
-		// feature.vectors.middleDirection.x() = cvmGet(pEigVecs, 1, 0);
-		// feature.vectors.middleDirection.y() = cvmGet(pEigVecs, 1, 1);
-		// feature.vectors.middleDirection.z() = cvmGet(pEigVecs, 1, 2);
-
-		feature.vectors.normalDirection.x() = cvmGet(pEigVecs, 2, 0);
-		feature.vectors.normalDirection.y() = cvmGet(pEigVecs, 2, 1);
-		feature.vectors.normalDirection.z() = cvmGet(pEigVecs, 2, 2);
-
-		feature.values.lamada1 = cvmGet(pEigVals, 0, 0);
-		feature.values.lamada2 = cvmGet(pEigVals, 0, 1);
-		feature.values.lamada3 = cvmGet(pEigVals, 0, 2);
+	    // Compute eigen values and eigen vectors 
+	    Eigen::Matrix3f eigen_vectors = pca_operator.getEigenVectors();
+	    Eigen::Vector3f eigen_values = pca_operator.getEigenValues();
+        
+        feature.vectors.principalDirection=eigen_vectors.col(0);
+        feature.vectors.normalDirection=eigen_vectors.col(2);
+        
+		feature.values.lamada1 = eigen_values(0);
+		feature.values.lamada2 = eigen_values(1);
+		feature.values.lamada3 = eigen_values(2);
 
 		if ((feature.values.lamada1 + feature.values.lamada2 + feature.values.lamada3) == 0)
 		{
@@ -306,10 +294,6 @@ public:
 		feature.linear_2 = ((feature.values.lamada1) - (feature.values.lamada2)) / (feature.values.lamada1);
 		feature.planar_2 = ((feature.values.lamada2) - (feature.values.lamada3)) / (feature.values.lamada1);
 		feature.spherical_2 = (feature.values.lamada3) / (feature.values.lamada1);
-		cvReleaseMat(&pEigVecs);
-		cvReleaseMat(&pEigVals);
-		cvReleaseMat(&pMean);
-		cvReleaseMat(&pData);
 
 		search_indices.swap(feature.neighbor_indices);
 		return true;

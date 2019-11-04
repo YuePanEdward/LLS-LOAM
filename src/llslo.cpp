@@ -1336,7 +1336,7 @@ bool Transaction::RunPureLidarOdometry(Submap &submap)
 
     // Ground Filter (Segment Ground and Unground points)
     // gf_min_grid_num is the min point number in a grid. those grid whose point number < gf_min_grid_num would be ignored  
-    int gf_min_grid_num = 9;
+    int gf_min_grid_num = 11;
     // gf_grid_resolution is the size of a grid (unit:m)               
     float gf_grid_resolution = 0.7;
     // points whose [(z - min_z of the grid) > gf_max_grid_height_diff] would be regarded as unground points (unit:m)
@@ -1346,7 +1346,7 @@ bool Transaction::RunPureLidarOdometry(Submap &submap)
     // points whose z is larger than gf_max_ground_height would be regarded as unground points whatever (unit:m)  
     float gf_max_ground_height = 1.0;
     // gf_downsample_rate_nonground is the random downsample ratio of detected unground points [the downsample is for efficiency concerning]
-    int gf_downsample_rate_nonground = 2;
+    int gf_downsample_rate_nonground = 3;
     // only gf_downsample_grid_number_first points would be randomly selected as the ground points in a grid
     // This group of ground points are used for registration [target ground points (more point number)] 
     int gf_downsample_grid_number_first = 2;  
@@ -1509,7 +1509,7 @@ bool Transaction::RunPureLidarOdometry(Submap &submap)
             LOG(INFO) << "*** SCAN TO SCAN REGISTRATION ***";
 
             int code = reg_.PairwiseReg(submap.raw_data_group[i - 1],
-                             submap.raw_data_group[i], pose2to1, GNSSINSPoseDiff);  //GNSSINSPoseDiff  //UniformMotion
+                             submap.raw_data_group[i], pose2to1, UniformMotion);  //GNSSINSPoseDiff  //UniformMotion
             if (code == 1 || code == -4 ) { // Successful (1) or  Absolutely failed (-4) 
                submap.raw_data_group[i].raw_frame.last_transform.copyFrom(pose2to1);
                //Get frame's lidar odometry pose
@@ -1652,116 +1652,6 @@ bool Transaction::RunPureLidarOdometry(Submap &submap)
 
     return true;
 }
-
-
-#if 0 // fix calib 1
-
-      Eigen::Matrix3d transInforMat = Eigen::Matrix3d::Identity();
-      transInforMat(0, 0) = gnssins_infos[0].pos_east_accuracy;
-      transInforMat(1, 1) = gnssins_infos[0].pos_nrth_accuracy;
-      transInforMat(2, 2) = gnssins_infos[0].pos_alti_accuracy;                       
-      Eigen::Matrix3d gain = T.block<3,3>(0,0);
-      transInforMat = gain * transInforMat * gain.transpose();
-      transInforMat = transInforMat.inverse().eval();
-      Eigen::Matrix3d rotInforMat = Eigen::Matrix3d::Ones() * 1e6;                       
-                             
-      double exp_sigma2_div4 = exp(gnssins_infos[0].rot_yaw_accuracy * gnssins_infos[0].rot_yaw_accuracy / 4);
-      rotInforMat(2, 2) = 1 / (0.5 * (1 - exp_sigma2_div4) * (1 + exp_sigma2_div4 * cos(gnssins_infos[0].rot_yaw_accuracy) ) );
-      raw_gnss.information_matrix.block<3,3>(0, 0) = transInforMat; // TODO
-      raw_gnss.information_matrix.block<3,3>(3, 3) = rotInforMat;
-      LOG(ERROR) << "Gnss Information Matrix is \n" << raw_gnss.information_matrix;
-
-#endif
-
-#if 0 // fix calib 2
-    ceres::Solver::Options options_;
-    options_.minimizer_progress_to_stdout;
-    options_.function_tolerance = 1e-16;
-    options_.parameter_tolerance = 1e-16;
-    options_.gradient_tolerance = 1e-16;
-    options_.max_num_iterations = 10000;
-    options_.minimizer_progress_to_stdout = true;
-    options_.trust_region_strategy_type = ceres::LEVENBERG_MARQUARDT;
-    options_.num_threads = 1;
-    options_.sparse_linear_algebra_library_type = ceres::SUITE_SPARSE;
-    options_.dense_linear_algebra_library_type = ceres::EIGEN;
-    options_.linear_solver_type = ceres::DENSE_SCHUR;
-    ceres::Problem problem;
-    Eigen::Quaterniond calib(Eigen::Matrix3d::Identity());
-    Eigen::Matrix<double, 3, 3> InformationMatrix = Eigen::Matrix<double, 3, 3>::Identity();
-    ceres::LocalParameterization *q_p = new ceres::EigenQuaternionParameterization;
-    for (int i = 0; i < submap_number_; i++)
-    {
-        for (int j = 0; j < sub_maps_[i].frame_number; j++)
-        {
-            ceres::CostFunction *cost_function = FixCalibErrorTerm::Create(sub_maps_[i].raw_data_group[j].raw_gnss.pose,
-                                                                           sub_maps_[i].raw_data_group[j].raw_frame.pose,
-                                                                           InformationMatrix);
-            ceres::LossFunction *huber_loss = new ceres::HuberLoss(1.0);
-            problem.AddResidualBlock(cost_function, huber_loss, calib.coeffs().data());
-            problem.SetParameterization(calib.coeffs().data(), q_p);
-        }
-    }
-    ceres::Solver::Summary summary;
-    ceres::Solve(options_, &problem, &summary);
-    // std::cout << summary.FullReport() << std::endl;
-    LOG(WARNING) << "calib is " << calib.toRotationMatrix();
-
-#endif
-
-#if 0 //Fix UTM projection. use actual UTM projection instead of KITTI's
-    //Calculate Location from latitude, longitude, altitude [KITTI's projection equation]
-    Eigen::Vector2d mercator;
-    mercator[0] = global_scale * lon * earth_radius;
-    mercator[1] = global_scale * earth_radius * log(tan(0.25 * M_PI + lat / 2));
-
-    double kitti_x = mercator[0] - kitti_origin_x;
-    double kitti_y = mercator[1] - kitti_origin_y;
-
-    printf("KITTI Proj X:%lf , Y:%lf\n", kitti_x, kitti_y);
-
-    printf("UTM 51 Zone Proj X:%lf , Y:%lf\n", utm51_x, utm51_y);
-
-    if (kkk % 100 == 0)
-    {
-        std::ofstream outfile("trajectory-wgs84.txt", std::ios::app);
-        if (outfile)
-        {
-            outfile << setprecision(10) << lon << "\t" << lat << "\n";
-        }
-        outfile.close();
-    }
-
-    if (kkk % 10 == 0)
-    {
-        std::ofstream outfile("trajectory-utm-notran.txt", std::ios::app);
-        if (outfile)
-        {
-            outfile << setprecision(10)<< x_utm << "\t" << y_utm << "\t" << alt << "\n";
-        }
-        outfile.close();
-
-        std::ofstream outfile1("trajectory-utm51.txt", std::ios::app); // add after the file
-        std::ofstream outfile2("trajectory-kitti.txt", std::ios::app);
-        if (outfile1)
-        {
-            outfile1 << utm51_x << "\t" << utm51_y << "\t" << alt << "\n";
-        }
-        outfile1.close();
-        if (outfile2)
-        {
-            outfile2 << kitti_x << "\t" << kitti_y << "\t" << alt << "\n";
-        }
-        outfile2.close();
-    }
-
-    printf("UTM 51 - KITTI : dX:%lf , dY:%lf ,unit(mm)\n", (utm51_x - kitti_x) * 1000.0, (utm51_x - kitti_x) * 1000.0);
-    LOG(WARNING) << "Old - X:" << mercator[0] << ",Y:" << mercator[1];
-
-    utm_kitti_x += (utm51_x - kitti_x) * 1000.0;
-    utm_kitti_y += (utm51_y - kitti_y) * 1000.0;
-
-#endif
 
 
 } // namespace lls_loam
