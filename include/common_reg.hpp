@@ -1175,7 +1175,7 @@ public:
                 float dy = py - qy;
                 float dz = pz - qz;
 
-                float nx = ntx * nsz - ntz * nsy;
+                float nx = nty * nsz - ntz * nsy;
                 float ny = ntz * nsx - ntx * nsz;
                 float nz = ntx * nsy - nty * nsx;
                 float nd = sqrt(nx * nx + ny * ny + nz * nz);
