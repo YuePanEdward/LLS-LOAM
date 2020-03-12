@@ -1348,7 +1348,7 @@ class CRegistration
             corr_rej_dist.setMaximumDistance(dis_thre);
             corr_rej_dist.getCorrespondences(*Corr_f);
 
-#if 1
+#if 0
             //Normal direction consistency check
             for (auto iter = Corr_f->begin(); iter != Corr_f->end();)
             {
