@@ -1,7 +1,7 @@
 //
 // This file is for the Implement of Principle Component Analysis (PCA) of point cloud data
 // With the assist of OpenCV
-// Dependent 3rd Libs: PCL (>=1.7), OpenCV, Eigen    
+// Dependent 3rd Libs: PCL (>=1.7), OpenCV, Eigen
 //
 
 #ifndef _INCLUDE_PCA_H_
@@ -58,7 +58,7 @@ struct pcaFeature //PCA
 template <typename Point_T>
 class PrincipleComponentAnalysis
 {
-public:
+  public:
 	/**
 		* \brief Estimate the normals of the input Point Cloud by PCL speeding up with OpenMP
 		* \param[in] inputPointCloud is the input Point Cloud Pointer
@@ -128,9 +128,9 @@ public:
 		for (int i = 0; i < ground_idx.size(); i++)
 		{
 			pcl::PointXYZ pt;
-			pt.x= cloud_in->points[ground_idx[i]].x;
-			pt.y= cloud_in->points[ground_idx[i]].y;
-			pt.z= cloud_in->points[ground_idx[i]].z;
+			pt.x = cloud_in->points[ground_idx[i]].x;
+			pt.y = cloud_in->points[ground_idx[i]].y;
+			pt.z = cloud_in->points[ground_idx[i]].z;
 			cloud_pcl->points.push_back(pt);
 		}
 
@@ -188,9 +188,9 @@ public:
 		tree.setInputCloud(inputPointCloud);
 		features.resize(inputPointCloud->size());
 
-		//concurrency::parallel_for(size_t(0), inputPointCloud->points.size(), [&](size_t i)   //Multi-thread
-		//{
-		for (int i = 0; i < inputPointCloud->points.size(); i++)
+		int i;
+#pragma omp parallel for private(i) //Multi-thread
+		for (i = 0; i < inputPointCloud->points.size(); i++)
 		{
 			std::vector<int> search_indices; //point index Vector
 			std::vector<float> distances;	//distance Vector
@@ -206,7 +206,6 @@ public:
 			// inputPointCloud->points[i].normal_y =  features[i].vectors.normalDirection.y();
 			// inputPointCloud->points[i].normal_z =  features[i].vectors.normalDirection.z();
 		}
-		//});
 
 		return true;
 	}
@@ -219,10 +218,11 @@ public:
 		pcl::KdTreeFLANN<Point_T> tree;
 		tree.setInputCloud(inputPointCloud);
 		features.resize(inputPointCloud->size());
-
-		//concurrency::parallel_for(size_t(0), inputPointCloud->points.size(), [&](size_t i)   //Multi-thread
-		//{
-		for (int i = 0; i < inputPointCloud->points.size(); i++)
+        
+		int i;
+		
+#pragma omp parallel for private(i) //Multi-thread
+		for ( i = 0; i < inputPointCloud->points.size(); i++)
 		{
 			std::vector<int> search_indices; //point index Vector
 			std::vector<float> distances;	//distance Vector
@@ -234,9 +234,7 @@ public:
 			features[i].ptId = i;
 			features[i].ptNum = search_indices.size();
 			CalculatePcaFeature(inputPointCloud, search_indices, features[i]);
-			
 		}
-		//});
 
 		return true;
 	}
@@ -254,27 +252,26 @@ public:
 	{
 		size_t ptNum;
 		ptNum = search_indices.size();
-        
+
 		if (ptNum < 3)
 			return false;
-        
-        
-		typename pcl::PointCloud<Point_T>::Ptr selected_cloud (new pcl::PointCloud<Point_T>());
-        for (size_t i = 0; i < ptNum; ++i)
+
+		typename pcl::PointCloud<Point_T>::Ptr selected_cloud(new pcl::PointCloud<Point_T>());
+		for (size_t i = 0; i < ptNum; ++i)
 		{
 			selected_cloud->points.push_back(inputPointCloud->points[search_indices[i]]);
 		}
-        
-        pcl::PCA<Point_T> pca_operator;
-	    pca_operator.setInputCloud(selected_cloud);
 
-	    // Compute eigen values and eigen vectors 
-	    Eigen::Matrix3f eigen_vectors = pca_operator.getEigenVectors();
-	    Eigen::Vector3f eigen_values = pca_operator.getEigenValues();
-        
-        feature.vectors.principalDirection=eigen_vectors.col(0);
-        feature.vectors.normalDirection=eigen_vectors.col(2);
-        
+		pcl::PCA<Point_T> pca_operator;
+		pca_operator.setInputCloud(selected_cloud);
+
+		// Compute eigen values and eigen vectors
+		Eigen::Matrix3f eigen_vectors = pca_operator.getEigenVectors();
+		Eigen::Vector3f eigen_values = pca_operator.getEigenValues();
+
+		feature.vectors.principalDirection = eigen_vectors.col(0);
+		feature.vectors.normalDirection = eigen_vectors.col(2);
+
 		feature.values.lamada1 = eigen_values(0);
 		feature.values.lamada2 = eigen_values(1);
 		feature.values.lamada3 = eigen_values(2);
@@ -299,8 +296,8 @@ public:
 		return true;
 	}
 
-protected:
-private:
+  protected:
+  private:
 	/**
 		* \brief Check the Normals (if they are finite)
 		* \param  normals is the input Point Cloud (XYZI)'s Normal Pointer

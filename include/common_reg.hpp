@@ -1,8 +1,8 @@
 //
 // This file is for the common implement of various registration methods
 // It would cover the classic fine registration method icp and its variants
-// And the feature points based registration methods 
-// Dependent 3rd Libs: PCL (>=1.7) , Eigen     
+// And the feature points based registration methods
+// Dependent 3rd Libs: PCL (>=1.7) , Eigen
 //
 
 #ifndef _INCLUDE_COMMON_REG_H_
@@ -51,7 +51,7 @@ enum point_type
     EDGE,
     PLANAR,
     SPHERE
-}; 
+};
 enum transform_estimator_type
 {
     SVD,
@@ -73,7 +73,7 @@ enum metrics_type
 template <typename PointType>
 class CRegistration
 {
-public:
+  public:
     typedef pcl::PointXYZINormal PointT;
 
     typedef pcl::PointCloud<pcl::PointXYZRGB>::Ptr pcXYZRGBPtr;
@@ -90,13 +90,14 @@ public:
     // code=-3::Too little Ground features found; code=-4::Too large translation or rotation for one iteration
     // Fix it later using try - catch
     //! WARNING: FrameData.noise_gnss.pose will be used as initial guess, make sure it is INIT correctly before you call this function
-    int PairwiseReg(FrameData &group1, FrameData &group2, Pose3d &pose, InitialGuessType initial_type) {
-        
+    int PairwiseReg(FrameData &group1, FrameData &group2, Pose3d &pose, InitialGuessType initial_type)
+    {
+
         int max_iter_num = 12;
-        float thre_dis_ground = 0.7f; 
-        float thre_dis_edge = 0.65f;   
-        float thre_dis_planar = 0.65f; 
-        float thre_dis_sphere = 0.55f;  
+        float thre_dis_ground = 0.7f;
+        float thre_dis_edge = 0.65f;
+        float thre_dis_planar = 0.65f;
+        float thre_dis_sphere = 0.55f;
 
         // Preprocessing: Initialize Feature Point Cloud (Fix it later by removing pcl dependency)
         pcl::PointCloud<PointT>::Ptr Source_Ground(new pcl::PointCloud<PointT>);
@@ -107,60 +108,60 @@ public:
         pcl::PointCloud<PointT>::Ptr Target_Edge(new pcl::PointCloud<PointT>);
         pcl::PointCloud<PointT>::Ptr Target_Planar(new pcl::PointCloud<PointT>);
         pcl::PointCloud<PointT>::Ptr Target_Sphere(new pcl::PointCloud<PointT>);
-        
-        ExtractFeaturePointsFromFullPointCloud(group2.raw_frame.cld_lidar_ptr, group2.raw_frame.ground_down_index, Source_Ground); 
-        ExtractFeaturePointsFromFullPointCloud(group2.raw_frame.cld_lidar_ptr, group2.raw_frame.edge_down_index, Source_Edge); 
-        ExtractFeaturePointsFromFullPointCloud(group2.raw_frame.cld_lidar_ptr, group2.raw_frame.planar_down_index, Source_Planar); 
-        ExtractFeaturePointsFromFullPointCloud(group2.raw_frame.cld_lidar_ptr, group2.raw_frame.sphere_down_index, Source_Sphere); 
-        ExtractFeaturePointsFromFullPointCloud(group1.raw_frame.cld_lidar_ptr, group1.raw_frame.ground_index, Target_Ground); 
-        ExtractFeaturePointsFromFullPointCloud(group1.raw_frame.cld_lidar_ptr, group1.raw_frame.edge_index, Target_Edge); 
-        ExtractFeaturePointsFromFullPointCloud(group1.raw_frame.cld_lidar_ptr, group1.raw_frame.planar_index, Target_Planar); 
-        ExtractFeaturePointsFromFullPointCloud(group1.raw_frame.cld_lidar_ptr, group1.raw_frame.sphere_index, Target_Sphere); 
+
+        ExtractFeaturePointsFromFullPointCloud(group2.raw_frame.cld_lidar_ptr, group2.raw_frame.ground_down_index, Source_Ground);
+        ExtractFeaturePointsFromFullPointCloud(group2.raw_frame.cld_lidar_ptr, group2.raw_frame.edge_down_index, Source_Edge);
+        ExtractFeaturePointsFromFullPointCloud(group2.raw_frame.cld_lidar_ptr, group2.raw_frame.planar_down_index, Source_Planar);
+        ExtractFeaturePointsFromFullPointCloud(group2.raw_frame.cld_lidar_ptr, group2.raw_frame.sphere_down_index, Source_Sphere);
+        ExtractFeaturePointsFromFullPointCloud(group1.raw_frame.cld_lidar_ptr, group1.raw_frame.ground_index, Target_Ground);
+        ExtractFeaturePointsFromFullPointCloud(group1.raw_frame.cld_lidar_ptr, group1.raw_frame.edge_index, Target_Edge);
+        ExtractFeaturePointsFromFullPointCloud(group1.raw_frame.cld_lidar_ptr, group1.raw_frame.planar_index, Target_Planar);
+        ExtractFeaturePointsFromFullPointCloud(group1.raw_frame.cld_lidar_ptr, group1.raw_frame.sphere_index, Target_Sphere);
 
         //Source point cloud initial guess
         pcl::PointCloud<PointT>::Ptr Source_Ground_g(new pcl::PointCloud<PointT>);
         pcl::PointCloud<PointT>::Ptr Source_Edge_g(new pcl::PointCloud<PointT>);
         pcl::PointCloud<PointT>::Ptr Source_Planar_g(new pcl::PointCloud<PointT>);
         pcl::PointCloud<PointT>::Ptr Source_Sphere_g(new pcl::PointCloud<PointT>);
-        
+
         Eigen::Matrix4d transformation2to1g;
 
         switch (initial_type)
         {
-            case GNSSINSPoseDiff:
-            {
-                // Provide initial guess by OXTS pose
-                // Pose3d pose2to1g(group1.raw_gnss.pose.quat.conjugate() * group2.raw_gnss.pose.quat,
-                //                  group1.raw_gnss.pose.quat.conjugate() * (group2.raw_gnss.pose.trans - group1.raw_gnss.pose.trans));
+        case GNSSINSPoseDiff:
+        {
+            // Provide initial guess by OXTS pose
+            // Pose3d pose2to1g(group1.raw_gnss.pose.quat.conjugate() * group2.raw_gnss.pose.quat,
+            //                  group1.raw_gnss.pose.quat.conjugate() * (group2.raw_gnss.pose.trans - group1.raw_gnss.pose.trans));
 
-                Pose3d pose2to1g(group1.noise_gnss.pose.quat.conjugate() * group2.noise_gnss.pose.quat,
-                group1.noise_gnss.pose.quat.conjugate() * (group2.noise_gnss.pose.trans - group1.noise_gnss.pose.trans));
+            Pose3d pose2to1g(group1.noise_gnss.pose.quat.conjugate() * group2.noise_gnss.pose.quat,
+                             group1.noise_gnss.pose.quat.conjugate() * (group2.noise_gnss.pose.trans - group1.noise_gnss.pose.trans));
 
-                transformation2to1g = pose2to1g.GetMatrix();
-                LOG(INFO) << "Initial Guess of OXTS \n"
-                          << transformation2to1g;
-                break;
-            }
-            case UniformMotion:
-            {
-                // Provide initial guess by uniform motion model
-                transformation2to1g = group1.raw_frame.last_transform.GetMatrix();
-                Pose3d pose2to1g;
-                pose2to1g.SetPose(transformation2to1g);
-                LOG(INFO) << "Initial Guess of Unifrom Motion \n"
-                          << transformation2to1g;
-                break;
-            }
-            case IMUPreintegration:
-            {
-                // Provide initial guess by imu preintegration (TO DO) 
-                // InitialGuessByIMUPreintergration();
-                break;
-            }
-            default:
-            {
-                break;
-            }   
+            transformation2to1g = pose2to1g.GetMatrix();
+            LOG(INFO) << "Initial Guess of OXTS \n"
+                      << transformation2to1g;
+            break;
+        }
+        case UniformMotion:
+        {
+            // Provide initial guess by uniform motion model
+            transformation2to1g = group1.raw_frame.last_transform.GetMatrix();
+            Pose3d pose2to1g;
+            pose2to1g.SetPose(transformation2to1g);
+            LOG(INFO) << "Initial Guess of Unifrom Motion \n"
+                      << transformation2to1g;
+            break;
+        }
+        case IMUPreintegration:
+        {
+            // Provide initial guess by imu preintegration (TO DO)
+            // InitialGuessByIMUPreintergration();
+            break;
+        }
+        default:
+        {
+            break;
+        }
         }
 
         //Apply intial guess
@@ -176,10 +177,11 @@ public:
         double trans_x, trans_y, trans_z;
         //Feature point efficient registration
         int code = FeaturePointsRegistration(transformation2to1, reg_information_matrix,
-                                            Source_Ground_g, Source_Edge_g, Source_Planar_g, Source_Sphere_g,
-                                            Target_Ground, Target_Edge, Target_Planar, Target_Sphere,
-                                            max_iter_num, thre_dis_ground, thre_dis_edge, thre_dis_planar, thre_dis_sphere, 0);
-        if (code == 1) {
+                                             Source_Ground_g, Source_Edge_g, Source_Planar_g, Source_Sphere_g,
+                                             Target_Ground, Target_Edge, Target_Planar, Target_Sphere,
+                                             max_iter_num, thre_dis_ground, thre_dis_edge, thre_dis_planar, thre_dis_sphere, 0);
+        if (code == 1)
+        {
             trans_x = transformation2to1(0, 3);
             trans_y = transformation2to1(1, 3);
             trans_z = transformation2to1(2, 3);
@@ -191,13 +193,13 @@ public:
             // LOG(INFO) << "Final Information Matrix:" << std::endl
             //           << reg_information_matrix << std::endl;
             pose.SetPose(transformation2to1.template cast<double>());
-            
-        } 
-        else {
+        }
+        else
+        {
             LOG(ERROR) << "Registration may encounter some problem, use default transformation, pcd is " << group1.raw_frame.pcd_file_name;
         }
 
-#if 0   // For display
+#if 0 // For display
         static int i = 0;
         static double trans_thre = 0.25;
         if (code != 1 || trans_x > trans_thre || trans_x < -trans_thre || trans_y > trans_thre || trans_y < -trans_thre || trans_z > trans_thre || trans_z < -trans_thre)
@@ -240,21 +242,23 @@ public:
         }
         i++;
 #endif
-        
+
         return code;
     }
 
     // Pairwise registration between frames by initial guess
-    bool PairwiseInitialGuess(FrameData &group1, FrameData &group2) {
+    bool PairwiseInitialGuess(FrameData &group1, FrameData &group2)
+    {
         Pose3d pose2to1g(group1.noise_gnss.pose.quat.conjugate() * group2.noise_gnss.pose.quat,
                          group1.noise_gnss.pose.quat.conjugate() * (group2.noise_gnss.pose.trans - group1.noise_gnss.pose.trans));
         Eigen::Matrix4d transformation2to1 = pose2to1g.GetMatrix();
         group2.raw_frame.pose.SetPose(group1.raw_frame.pose.GetMatrix() * transformation2to1);
         return 1;
     }
-    
+
     // Scan to local map registration
-    bool PairwiseReg(Submap &localmap, FrameData &currentscan, Pose3d &pose) {
+    bool PairwiseReg(Submap &localmap, FrameData &currentscan, Pose3d &pose)
+    {
         clock_t t1, t2;
 
         int max_iter_num = 6;
@@ -277,15 +281,15 @@ public:
         pcl::PointCloud<PointT>::Ptr Target_Sphere(new pcl::PointCloud<PointT>);
 
         t1 = clock();
-        
-        ExtractFeaturePointsFromFullPointCloud(currentscan.raw_frame.cld_lidar_ptr, currentscan.raw_frame.ground_down_index, Source_Ground); 
-        ExtractFeaturePointsFromFullPointCloud(currentscan.raw_frame.cld_lidar_ptr, currentscan.raw_frame.edge_down_index, Source_Edge); 
-        ExtractFeaturePointsFromFullPointCloud(currentscan.raw_frame.cld_lidar_ptr, currentscan.raw_frame.planar_down_index, Source_Planar); 
-        ExtractFeaturePointsFromFullPointCloud(currentscan.raw_frame.cld_lidar_ptr, currentscan.raw_frame.sphere_down_index, Source_Sphere); 
-        ExtractFeaturePointsFromFullPointCloud(localmap.cld_feature_ptr, localmap.ground_index, Target_Ground); 
-        ExtractFeaturePointsFromFullPointCloud(localmap.cld_feature_ptr, localmap.edge_index, Target_Edge); 
-        ExtractFeaturePointsFromFullPointCloud(localmap.cld_feature_ptr, localmap.planar_index, Target_Planar); 
-        ExtractFeaturePointsFromFullPointCloud(localmap.cld_feature_ptr, localmap.sphere_index, Target_Sphere); 
+
+        ExtractFeaturePointsFromFullPointCloud(currentscan.raw_frame.cld_lidar_ptr, currentscan.raw_frame.ground_down_index, Source_Ground);
+        ExtractFeaturePointsFromFullPointCloud(currentscan.raw_frame.cld_lidar_ptr, currentscan.raw_frame.edge_down_index, Source_Edge);
+        ExtractFeaturePointsFromFullPointCloud(currentscan.raw_frame.cld_lidar_ptr, currentscan.raw_frame.planar_down_index, Source_Planar);
+        ExtractFeaturePointsFromFullPointCloud(currentscan.raw_frame.cld_lidar_ptr, currentscan.raw_frame.sphere_down_index, Source_Sphere);
+        ExtractFeaturePointsFromFullPointCloud(localmap.cld_feature_ptr, localmap.ground_index, Target_Ground);
+        ExtractFeaturePointsFromFullPointCloud(localmap.cld_feature_ptr, localmap.edge_index, Target_Edge);
+        ExtractFeaturePointsFromFullPointCloud(localmap.cld_feature_ptr, localmap.planar_index, Target_Planar);
+        ExtractFeaturePointsFromFullPointCloud(localmap.cld_feature_ptr, localmap.sphere_index, Target_Sphere);
 
         //Source point cloud initial guess
         pcl::PointCloud<PointT>::Ptr Source_Ground_g(new pcl::PointCloud<PointT>);
@@ -320,11 +324,12 @@ public:
                                              max_iter_num, thre_dis_ground, thre_dis_edge,
                                              thre_dis_planar, thre_dis_sphere, 1);
         //Feature point efficient registration
-        if (code == 1) {
+        if (code == 1)
+        {
             trans_x = transformation2to1(0, 3);
             trans_y = transformation2to1(1, 3);
             trans_z = transformation2to1(2, 3);
-            
+
             //Get final registration result
             transformation2to1 = transformation2to1.template cast<float>() * transformation2to1g.template cast<float>();
             LOG(INFO) << "Final Registration result:" << std::endl
@@ -333,9 +338,11 @@ public:
             // LOG(INFO) << "Final Information Matrix:" << std::endl
             //           << reg_information_matrix << std::endl;
             pose.SetPose(transformation2to1.template cast<double>());
-        } else  {
+        }
+        else
+        {
             LOG(ERROR) << "Registration may encounter some problem, use default transformation.";
-            
+
             pose.SetPose(transformation2to1g.template cast<double>());
         }
 
@@ -367,10 +374,9 @@ public:
         return true;
     }
 
-
-
     // Pairwise registration between submaps
-    bool PairwiseReg(Edge &edge, Submap &submap1, Submap &submap2) {
+    bool PairwiseReg(Edge &edge, Submap &submap1, Submap &submap2)
+    {
         clock_t t1, t2;
 
         int max_iter_num = 15;
@@ -393,28 +399,32 @@ public:
         pcl::PointCloud<PointT>::Ptr Target_Sphere(new pcl::PointCloud<PointT>);
 
         t1 = clock();
-        
-        ExtractFeaturePointsFromFullPointCloud(submap2.cld_feature_ptr, submap2.ground_index, Source_Ground); 
-        ExtractFeaturePointsFromFullPointCloud(submap2.cld_feature_ptr, submap2.edge_index, Source_Edge); 
-        ExtractFeaturePointsFromFullPointCloud(submap2.cld_feature_ptr, submap2.planar_index, Source_Planar); 
-        ExtractFeaturePointsFromFullPointCloud(submap2.cld_feature_ptr, submap2.sphere_index, Source_Sphere); 
-        ExtractFeaturePointsFromFullPointCloud(submap1.cld_feature_ptr, submap1.ground_index, Target_Ground); 
-        ExtractFeaturePointsFromFullPointCloud(submap1.cld_feature_ptr, submap1.edge_index, Target_Edge); 
-        ExtractFeaturePointsFromFullPointCloud(submap1.cld_feature_ptr, submap1.planar_index, Target_Planar); 
-        ExtractFeaturePointsFromFullPointCloud(submap1.cld_feature_ptr, submap1.sphere_index, Target_Sphere); 
+
+        ExtractFeaturePointsFromFullPointCloud(submap2.cld_feature_ptr, submap2.ground_index, Source_Ground);
+        ExtractFeaturePointsFromFullPointCloud(submap2.cld_feature_ptr, submap2.edge_index, Source_Edge);
+        ExtractFeaturePointsFromFullPointCloud(submap2.cld_feature_ptr, submap2.planar_index, Source_Planar);
+        ExtractFeaturePointsFromFullPointCloud(submap2.cld_feature_ptr, submap2.sphere_index, Source_Sphere);
+        ExtractFeaturePointsFromFullPointCloud(submap1.cld_feature_ptr, submap1.ground_index, Target_Ground);
+        ExtractFeaturePointsFromFullPointCloud(submap1.cld_feature_ptr, submap1.edge_index, Target_Edge);
+        ExtractFeaturePointsFromFullPointCloud(submap1.cld_feature_ptr, submap1.planar_index, Target_Planar);
+        ExtractFeaturePointsFromFullPointCloud(submap1.cld_feature_ptr, submap1.sphere_index, Target_Sphere);
 
         int k; //local frame id in submap 1
         //find local frame as the nearest neighbor between two submaps
         if (edge.edge_type == Edge::Adjacent)
             k = submap1.frame_number - 1;
         // Revisit edge
-        else {
+        else
+        {
             int k_temp;
             double dis_temp = DBL_MAX;
-            for (int i = 0; i < submap1.frame_number; i++) {
-                for (int j = 0; j < submap2.frame_number; j++) {
+            for (int i = 0; i < submap1.frame_number; i++)
+            {
+                for (int j = 0; j < submap2.frame_number; j++)
+                {
                     double dis = (submap1.raw_data_group[i].raw_gnss.pose.trans - submap2.raw_data_group[j].raw_gnss.pose.trans).norm();
-                    if (dis < dis_temp) {
+                    if (dis < dis_temp)
+                    {
                         dis_temp = dis;
                         k_temp = i;
                     }
@@ -471,13 +481,16 @@ public:
                                              max_iter_num, thre_dis_ground, thre_dis_edge,
                                              thre_dis_planar, thre_dis_sphere, 1);
         //Feature point efficient registration
-        if (code == 1) {
+        if (code == 1)
+        {
             trans_x = transformation2to1(0, 3);
             trans_y = transformation2to1(1, 3);
             trans_z = transformation2to1(2, 3);
             edge.pose.SetPose(transformation1to1l.inverse() * (transformation2to1.template cast<double>() * transformation2to1g)); // 2 to 1
             edge.information_matrix = reg_information_matrix.template cast<double>();
-        } else  {
+        }
+        else
+        {
             LOG(ERROR) << "Registration may encounter some problem, use default transformation, submap1 is " << submap1.submap_id << "submap2 is " << submap2.submap_id;
             edge.pose.SetPose(transformation1to1l.inverse() * transformation2to1g);
             // Submap Registration Failed, Edge Information Matrix will be set Zero
@@ -518,7 +531,7 @@ public:
         return true;
     }
 
-// Test it 
+// Test it
 #if 0
     bool InitialGuessByIMUPreintergration(FrameData & last_frame_data, Eigen::Vector3d & initial_velocity, Eigen::Matrix4d & initial_guess)
     {
@@ -672,14 +685,16 @@ public:
 #if 1
     bool transformPointCloud(std::shared_ptr<PointCloud> point_cloud_ori_ptr,
                              pcl::PointCloud<pcl::PointXYZINormal>::Ptr &point_cloud_trgt_ptr,
-                             const Pose3d &pose) const {
-        if (!point_cloud_trgt_ptr->points.empty()) {
+                             const Pose3d &pose) const
+    {
+        if (!point_cloud_trgt_ptr->points.empty())
+        {
             point_cloud_trgt_ptr->points.clear();
         }
         pcl::PointCloud<pcl::PointXYZINormal>::Ptr cloud_in(new pcl::PointCloud<pcl::PointXYZINormal>);
         Eigen::Matrix4d trans = pose.GetMatrix();
-//        LOG(ERROR) << "Transform is " << trans;
-//        LOG(ERROR) << "Transform is " << pose.GetMatrix();
+        //        LOG(ERROR) << "Transform is " << trans;
+        //        LOG(ERROR) << "Transform is " << pose.GetMatrix();
 
         for (size_t i = 0; i < point_cloud_ori_ptr->points.size(); ++i)
         {
@@ -704,15 +719,16 @@ public:
     {
         clock_t t0, t1, t2, t3;
         t0 = clock();
-        
+
         if (!point_cloud_trgt_ptr->points.empty())
         {
             point_cloud_trgt_ptr->points.clear();
         }
 
-        if (pose.GetMatrix()==Eigen::Matrix4d::Identity(4,4)) {
-             point_cloud_trgt_ptr=point_cloud_ori_ptr;
-             return 1;
+        if (pose.GetMatrix() == Eigen::Matrix4d::Identity(4, 4))
+        {
+            point_cloud_trgt_ptr = point_cloud_ori_ptr;
+            return 1;
         }
         pcl::PointCloud<pcl::PointXYZINormal>::Ptr cloud_out(new pcl::PointCloud<pcl::PointXYZINormal>);
         transformPointCloud(point_cloud_ori_ptr, cloud_out, pose);
@@ -747,7 +763,8 @@ public:
                                   pcl::PointCloud<PointT>::Ptr &Target_Ground, pcl::PointCloud<PointT>::Ptr &Target_Edge,
                                   pcl::PointCloud<PointT>::Ptr &Target_Planar, pcl::PointCloud<PointT>::Ptr &Target_Sphere,
                                   int max_iter_num, float dis_thre_ground, float dis_thre_edge, float dis_thre_planar, float dis_thre_sphere,
-                                  bool edge_tag) const {
+                                  bool edge_tag)
+    {
 
         clock_t t0, t1, t2, t3, t4;
         int code = 1;
@@ -783,77 +800,35 @@ public:
 
         transformationS2T = Eigen::Matrix4f::Identity(4, 4);
 
+        //Correspondence
+        boost::shared_ptr<pcl::Correspondences> corrs_Ground_f(new pcl::Correspondences);
+        boost::shared_ptr<pcl::Correspondences> corrs_Edge_f(new pcl::Correspondences);
+        boost::shared_ptr<pcl::Correspondences> corrs_Planar_f(new pcl::Correspondences);
+        boost::shared_ptr<pcl::Correspondences> corrs_Sphere_f(new pcl::Correspondences);
+
         //Iteration
         for (int i = 0; i < max_iter_num; i++)
         {
             t1 = clock();
             //LOG(INFO) << "--------------- < Registration Iteration " << i << " > ---------------";
             //Estimate Correspondence
-            boost::shared_ptr<pcl::Correspondences> corrs_Ground(new pcl::Correspondences);
-            boost::shared_ptr<pcl::Correspondences> corrs_Edge(new pcl::Correspondences);
-            boost::shared_ptr<pcl::Correspondences> corrs_Planar(new pcl::Correspondences);
-            boost::shared_ptr<pcl::Correspondences> corrs_Sphere(new pcl::Correspondences);
-            boost::shared_ptr<pcl::Correspondences> corrs_Ground_f(new pcl::Correspondences);
-            boost::shared_ptr<pcl::Correspondences> corrs_Edge_f(new pcl::Correspondences);
-            boost::shared_ptr<pcl::Correspondences> corrs_Planar_f(new pcl::Correspondences);
-            boost::shared_ptr<pcl::Correspondences> corrs_Sphere_f(new pcl::Correspondences);
 
-            typename pcl::registration::CorrespondenceEstimation<PointT, PointT> corr_est;
-            pcl::registration::CorrespondenceRejectorDistance corr_rej_dist;
+            Determine_corres(Source_Ground, Target_Ground, dis_thre_ground,
+                             corrs_Ground_f);
 
-            //For Ground points
-            if (Source_Ground->points.size() >= K_min && Target_Ground->points.size() >= K_min)
-            {
-                corr_est.setInputCloud(Source_Ground);
-                corr_est.setInputTarget(Target_Ground);
-                corr_est.determineCorrespondences(*corrs_Ground);
-                corr_rej_dist.setInputCorrespondences(corrs_Ground);
-                corr_rej_dist.setMaximumDistance(dis_thre_ground);
-                corr_rej_dist.getCorrespondences(*corrs_Ground_f);
-            }
+            Determine_corres(Source_Edge, Target_Edge, dis_thre_edge,
+                             corrs_Edge_f);
 
-            //For Edge points
-            if (Source_Edge->points.size() >= K_min && Target_Edge->points.size() >= K_min)
-            {
-                corr_est.setInputCloud(Source_Edge);
-                corr_est.setInputTarget(Target_Edge);
-                corr_est.determineCorrespondences(*corrs_Edge);
-                corr_rej_dist.setInputCorrespondences(corrs_Edge);
-                corr_rej_dist.setMaximumDistance(dis_thre_edge);
-                corr_rej_dist.getCorrespondences(*corrs_Edge_f);
-            }
+            Determine_corres(Source_Planar, Target_Planar, dis_thre_planar,
+                             corrs_Planar_f);
 
-            //For Planar points
-            if (Source_Planar->points.size() >= K_min && Target_Planar->points.size() >= K_min)
-            {
-                corr_est.setInputCloud(Source_Planar);
-                corr_est.setInputTarget(Target_Planar);
-                corr_est.determineCorrespondences(*corrs_Planar);
-                corr_rej_dist.setInputCorrespondences(corrs_Planar);
-                corr_rej_dist.setMaximumDistance(dis_thre_planar);
-                corr_rej_dist.getCorrespondences(*corrs_Planar_f);
-            }
-
-            //For Sphere points
-            if (Source_Sphere->points.size() >= K_min && Target_Sphere->points.size() >= K_min)
-            {
-                corr_est.setInputCloud(Source_Sphere);
-                corr_est.setInputTarget(Target_Sphere);
-                corr_est.determineCorrespondences(*corrs_Sphere);
-                corr_rej_dist.setInputCorrespondences(corrs_Sphere);
-                corr_rej_dist.setMaximumDistance(dis_thre_sphere);
-                corr_rej_dist.getCorrespondences(*corrs_Sphere_f);
-            }
+            Determine_corres(Source_Sphere, Target_Sphere, dis_thre_sphere,
+                             corrs_Sphere_f);
 
             dis_thre_ground = max_(dis_thre_ground / 1.1, 0.4);
             dis_thre_edge = max_(dis_thre_edge / 1.1, 0.3);
             dis_thre_planar = max_(dis_thre_planar / 1.1, 0.3);
             dis_thre_sphere = max_(dis_thre_sphere / 1.1, 0.3);
-
-            if (i == 0)
-            {
-                LOG(INFO) << "Found correspondence # [G:" << (*corrs_Ground).size() << " E:" << (*corrs_Edge).size() << " P:" << (*corrs_Planar).size() << " S:" << (*corrs_Sphere).size() << "]";
-            }
 
             LOG(INFO) << "Iter " << i << " - Correspondence after filtering # [G:" << (*corrs_Ground_f).size() << " E:" << (*corrs_Edge_f).size()
                       << " P:" << (*corrs_Planar_f).size() << " S:" << (*corrs_Sphere_f).size() << "]";
@@ -963,7 +938,6 @@ public:
 
         return code;
     }
-    
 
     // Using Linear Least Square Optimization to estimate the transformation using multiple metrics for different kind of feature point correspondence
     // When the rotation angle is small, sin(alpha) ~ alpha, so we can do the linearization
@@ -971,13 +945,13 @@ public:
     // We use point-to-line metrics for edge correspondecnes
     // We use point-to-point metrics for sphere correspondences
     // For function Ax=b , [ x= tx,ty,tz,alpha,beta,gamma ], we can slove x^ = (ATA)^(-1)*(ATb)
-    bool MultiMetricsLLSEstimation(const typename pcl::PointCloud<PointT>::Ptr &Source_Ground, const typename pcl::PointCloud<PointT>::Ptr &Target_Ground,
-                                      boost::shared_ptr<pcl::Correspondences> &Corr_Ground, const typename pcl::PointCloud<PointT>::Ptr &Source_Edge,
-                                      const typename pcl::PointCloud<PointT>::Ptr &Target_Edge, boost::shared_ptr<pcl::Correspondences> &Corr_Edge,
-                                      const typename pcl::PointCloud<PointT>::Ptr &Source_Planar, const typename pcl::PointCloud<PointT>::Ptr &Target_Planar,
-                                      boost::shared_ptr<pcl::Correspondences> &Corr_Planar, const typename pcl::PointCloud<PointT>::Ptr &Source_Sphere,
-                                      const typename pcl::PointCloud<PointT>::Ptr &Target_Sphere, boost::shared_ptr<pcl::Correspondences> &Corr_Sphere,
-                                      Eigen::Matrix<float, 6, 1> &x, Eigen::Matrix<float, 6, 6> &information_matrix) const
+    bool MultiMetricsLLSEstimation(pcl::PointCloud<PointT>::Ptr &Source_Ground, pcl::PointCloud<PointT>::Ptr &Target_Ground,
+                                   boost::shared_ptr<pcl::Correspondences> &Corr_Ground, pcl::PointCloud<PointT>::Ptr &Source_Edge,
+                                   pcl::PointCloud<PointT>::Ptr &Target_Edge, boost::shared_ptr<pcl::Correspondences> &Corr_Edge,
+                                   pcl::PointCloud<PointT>::Ptr &Source_Planar, pcl::PointCloud<PointT>::Ptr &Target_Planar,
+                                   boost::shared_ptr<pcl::Correspondences> &Corr_Planar, pcl::PointCloud<PointT>::Ptr &Source_Sphere,
+                                   pcl::PointCloud<PointT>::Ptr &Target_Sphere, boost::shared_ptr<pcl::Correspondences> &Corr_Sphere,
+                                   Eigen::Matrix<float, 6, 1> &x, Eigen::Matrix<float, 6, 6> &information_matrix)
     {
         typedef Eigen::Matrix<float, 6, 1> Vector6f;
         typedef Eigen::Matrix<float, 6, 6> Matrix6f;
@@ -988,12 +962,13 @@ public:
         ATb.setZero();
 
 #if 1
-        float w_ground, w_planar, w_edge_x, w_edge_y, w_edge_z, w_sphere;
 
-        float balance_ratio = 1.0 * (*Corr_Ground).size() / ((*Corr_Planar).size() + (*Corr_Edge).size() + (*Corr_Sphere).size());
         int Corr_total_num = (*Corr_Ground).size() + (*Corr_Planar).size() + (*Corr_Edge).size() + (*Corr_Sphere).size();
 
-        w_ground = 3.0 / balance_ratio;
+        float w_ground, w_planar, w_edge, w_sphere;
+        
+        //balance x,y,z direction
+        w_ground = (0.7 * (*Corr_Planar).size() + 1.0 * (*Corr_Edge).size()) / (*Corr_Ground).size();
 
         //LOG(INFO) << "Begin accumulation";
         //Ground to Ground (Plane to Plane)
@@ -1061,6 +1036,7 @@ public:
         //LOG(INFO) << "Ground OK";
 
         //Planar to Planar (Plane to Plane) Facade
+        w_planar = 1.0;
         for (int i = 0; i < (*Corr_Planar).size(); i++)
         {
             int s_index, t_index;
@@ -1082,10 +1058,6 @@ public:
                 // if (i % 100 == 0)
                 //     LOG(INFO) << "Normal (x,y,z): " << ntx << "," << nty << "," << ntz;
 
-                if (Corr_total_num < 15000)
-                    w_planar = 1.0 + 1.0 * min_(sqrt(qx * qx + qy * qy) / 20.0, 2.0); //distance weighted  //1.0 ~ 3.0  [Frame to frame reg]
-                else
-                    w_planar = 2.0;
                 float w = w_planar;
 
                 float a = ntz * py - nty * pz;
@@ -1134,6 +1106,7 @@ public:
         //LOG(INFO) << "Planar OK";
 
         //Edge to Edge (Line to Line)
+        w_edge = 2.0 / 3;
         for (int i = 0; i < (*Corr_Edge).size(); i++)
         {
             int s_index, t_index;
@@ -1161,15 +1134,9 @@ public:
                 //     LOG(INFO) << "Normal S (x,y,z): " << nsx << "," << nsy << "," << nsz;
                 // }
 
-                float wx, wy, wz;
-
-                if (Corr_total_num < 15000)
-                    wx = 0.5 + 0.5 * min_(sqrt(qx * qx + qy * qy) / 40.0, 1.0); //1.5 - 3  [Frame to Frame Reg, Distance Weighted]
-                else
-                    wx = 0.8;
-
-                wy = wx;
-                wz = 0.5 * wx;
+                float wx = w_edge;
+                float wy = w_edge;
+                float wz = w_edge;
 
                 float dx = px - qx;
                 float dy = py - qy;
@@ -1182,25 +1149,6 @@ public:
                 nx /= nd;
                 ny /= nd;
                 nz /= nd;
-
-                // if (nz >0.7)
-                // {
-                // 	wx=1.25;
-                // 	wy=1.25;
-                // 	wz=0.25;
-                // }
-                // else if (nz<0.25)
-                // {
-                // 	wx=0.5;
-                // 	wy=0.5;
-                // 	wz=1.25;
-                // }
-                // else
-                // {
-                // 	wx=0.8;
-                // 	wy=0.8;
-                // 	wz=0.8;
-                // }
 
                 double nxy = nx * ny;
                 double nxz = nx * nz;
@@ -1255,6 +1203,7 @@ public:
         //LOG(INFO) << "Edge OK";
 
         //Sphere to Sphere (Point to Point)
+        w_sphere = 1.0;
         for (int i = 0; i < (*Corr_Sphere).size(); i++)
         {
             int s_index, t_index;
@@ -1270,11 +1219,6 @@ public:
                 float qy = Target_Sphere->points[t_index].y;
                 float qz = Target_Sphere->points[t_index].z;
 
-                if (Corr_total_num < 15000)
-                    w_sphere = 0.5 + 0.5 * min_(sqrt(qx * qx + qy * qy) / 40.0, 1.0); //1.5 - 3  [Frame to Frame Reg, Distance Weighted]
-                else
-                    w_sphere = 0.8;
-
                 float wx = w_sphere;
                 float wy = w_sphere;
                 float wz = w_sphere;
@@ -1282,7 +1226,7 @@ public:
                 float dx = px - qx;
                 float dy = py - qy;
                 float dz = pz - qz;
-           
+
                 //    0  1  2  3  4  5
                 //    6  7  8  9 10 11
                 //   12 13 14 15 16 17
@@ -1348,15 +1292,105 @@ public:
 
         return 1;
     }
-    
 
-    bool MultiMetricsLLSCalculateResidual(const typename pcl::PointCloud<PointT>::Ptr &Source_Ground, const typename pcl::PointCloud<PointT>::Ptr &Target_Ground,
-                                          boost::shared_ptr<pcl::Correspondences> &Corr_Ground, const typename pcl::PointCloud<PointT>::Ptr &Source_Edge,
-                                          const typename pcl::PointCloud<PointT>::Ptr &Target_Edge, boost::shared_ptr<pcl::Correspondences> &Corr_Edge,
-                                          const typename pcl::PointCloud<PointT>::Ptr &Source_Planar, const typename pcl::PointCloud<PointT>::Ptr &Target_Planar,
-                                          boost::shared_ptr<pcl::Correspondences> &Corr_Planar, const typename pcl::PointCloud<PointT>::Ptr &Source_Sphere,
-                                          const typename pcl::PointCloud<PointT>::Ptr &Target_Sphere, boost::shared_ptr<pcl::Correspondences> &Corr_Sphere,
-                                          const Eigen::Matrix<float, 6, 1> &transform_x, double &sigma2) const
+    bool Determine_corres(pcl::PointCloud<PointT>::Ptr &Source_Cloud, pcl::PointCloud<PointT>::Ptr &Target_Cloud, float dis_thre,
+                          boost::shared_ptr<pcl::Correspondences> &Corr_f, int K_filter_distant_point = 1000, float angle_thre_degree = 45)
+    {
+        int K_min = 5;
+        float filter_dis_times = 2.0;
+
+        pcl::registration::CorrespondenceEstimation<PointT, PointT> corr_est;
+        pcl::registration::CorrespondenceRejectorDistance corr_rej_dist;
+
+        boost::shared_ptr<pcl::Correspondences> Corr(new pcl::Correspondences);
+
+        pcl::PointCloud<PointT>::Ptr Source_Cloud_f(new pcl::PointCloud<PointT>);
+        pcl::PointCloud<PointT>::Ptr Target_Cloud_f(new pcl::PointCloud<PointT>);
+
+        if (Source_Cloud->points.size() >= K_min &&
+            Target_Cloud->points.size() >= K_min)
+        {
+            corr_est.setInputCloud(Source_Cloud);
+            corr_est.setInputTarget(Target_Cloud);
+            corr_est.determineCorrespondences(*Corr);
+
+#if 1
+            if (Source_Cloud->points.size() >= K_filter_distant_point)
+            {
+                corr_rej_dist.setInputCorrespondences(Corr);
+                corr_rej_dist.setMaximumDistance(filter_dis_times * dis_thre);
+                corr_rej_dist.getCorrespondences(*Corr);
+
+                int count = 0;
+
+                for (int i = 0; i < (*Corr).size(); i++)
+                {
+                    int s_index, t_index;
+                    s_index = (*Corr)[i].index_query;
+                    t_index = (*Corr)[i].index_match;
+
+                    if (t_index != -1)
+                    {
+                        Source_Cloud_f->points.push_back(Source_Cloud->points[s_index]);
+                        //Target_Cloud_f->points.push_back(Target_Cloud->points[t_index]);
+                        (*Corr)[count].index_query = count;
+                        //(*Corr)[count].index_match = count;
+                        count++;
+                    }
+                }
+                Corr->resize(count);
+
+                Source_Cloud_f->points.swap(Source_Cloud->points);
+                //Target_Cloud_f->points.swap(Target_Cloud->points);
+            }
+#endif
+            corr_rej_dist.setInputCorrespondences(Corr);
+            corr_rej_dist.setMaximumDistance(dis_thre);
+            corr_rej_dist.getCorrespondences(*Corr_f);
+
+#if 1
+            //Normal direction consistency check
+            for (auto iter = Corr_f->begin(); iter != Corr_f->end();)
+            {
+                int s_index, t_index;
+                s_index = (*iter).index_query;
+                t_index = (*iter).index_match;
+
+                if (t_index != -1)
+                {
+                    Eigen::Vector3f n1;
+                    Eigen::Vector3f n2;
+                    n1 << Source_Cloud->points[s_index].normal[0], Source_Cloud->points[s_index].normal[1], Source_Cloud->points[s_index].normal[2];
+                    n2 << Target_Cloud->points[t_index].normal[0], Target_Cloud->points[t_index].normal[1], Target_Cloud->points[t_index].normal[2];
+
+                    float cos_intersection_angle = std::abs(n1.dot(n2) / n1.norm() / n2.norm());
+
+                    if (cos_intersection_angle < cos(angle_thre_degree / 180.0 * M_PI))
+                        iter = Corr_f->erase(iter);
+                    else
+                        iter++;
+                }
+                else
+                    iter++;
+            }
+
+#endif
+        }
+        else
+        {
+            return 0;
+        }
+
+        return 1;
+    }
+
+    bool MultiMetricsLLSCalculateResidual(pcl::PointCloud<PointT>::Ptr &Source_Ground, pcl::PointCloud<PointT>::Ptr &Target_Ground,
+                                          boost::shared_ptr<pcl::Correspondences> &Corr_Ground, pcl::PointCloud<PointT>::Ptr &Source_Edge,
+                                          pcl::PointCloud<PointT>::Ptr &Target_Edge, boost::shared_ptr<pcl::Correspondences> &Corr_Edge,
+                                          pcl::PointCloud<PointT>::Ptr &Source_Planar, pcl::PointCloud<PointT>::Ptr &Target_Planar,
+                                          boost::shared_ptr<pcl::Correspondences> &Corr_Planar, pcl::PointCloud<PointT>::Ptr &Source_Sphere,
+                                          pcl::PointCloud<PointT>::Ptr &Target_Sphere, boost::shared_ptr<pcl::Correspondences> &Corr_Sphere,
+                                          const Eigen::Matrix<float, 6, 1> &transform_x, double &sigma2)
     {
         double MSE = 0;
 
@@ -1448,7 +1482,7 @@ public:
                 float dy = py - qy;
                 float dz = pz - qz;
 
-                float nx = ntx * nsz - ntz * nsy;
+                float nx = nty * nsz - ntz * nsy;
                 float ny = ntz * nsx - ntx * nsz;
                 float nz = ntx * nsy - nty * nsx;
                 float nd = sqrt(nx * nx + ny * ny + nz * nz);
@@ -1551,13 +1585,15 @@ public:
         transformation_matrix(2, 3) = static_cast<float>(tz);
         transformation_matrix(3, 3) = static_cast<float>(1);
     }
-    
-    // From the point cloud raw data, Given feature points index, extract those feature points and group them into the pcl PointCloud 
+
+    // From the point cloud raw data, Given feature points index, extract those feature points and group them into the pcl PointCloud
     // For further registration
-    void ExtractFeaturePointsFromFullPointCloud(const std::shared_ptr<point_cloud_t<PointType>> & full_pointcloud,
-                                                const std::vector<unsigned int> & feature_point_index,
-                                                pcl::PointCloud<PointT>::Ptr & feature_pointcloud_pcl) {
-        for (int i = 0; i < feature_point_index.size(); i++) {
+    void ExtractFeaturePointsFromFullPointCloud(const std::shared_ptr<point_cloud_t<PointType>> &full_pointcloud,
+                                                const std::vector<unsigned int> &feature_point_index,
+                                                pcl::PointCloud<PointT>::Ptr &feature_pointcloud_pcl)
+    {
+        for (int i = 0; i < feature_point_index.size(); i++)
+        {
             PointT pt;
             pt.x = full_pointcloud->points[feature_point_index[i]].x;
             pt.y = full_pointcloud->points[feature_point_index[i]].y;
@@ -1568,7 +1604,7 @@ public:
             feature_pointcloud_pcl->points.push_back(pt);
         }
     }
-    
+
     // A common icp registration function grouping pcl's icp implement
     // You can select from different kind of icp variants
     // Different metrics, correspondence estimators, rejectors and transformation estimators
@@ -1825,18 +1861,18 @@ public:
 
         return mae_nn;
     }
-    
+
     // A common icp registration function grouping pcl's icp implement
     // You can select from different kind of icp variants
     // Different metrics, correspondence estimators, rejectors and transformation estimators
     // This one use K nearest neighbor to estimate the normal
     double ICPRegistrationPCL(const typename pcl::PointCloud<PointType>::Ptr &SourceCloud,
-                             const typename pcl::PointCloud<PointType>::Ptr &TargetCloud,
-                             typename pcl::PointCloud<PointType>::Ptr &TransformedSource,
-                             Eigen::Matrix4f &transformationS2T,
-                             metrics_type metrics, correspondence_estimator_type ce, transform_estimator_type te,
-                             bool use_reciprocal_correspondence, bool use_trimmed_rejector,
-                             int max_iter, float thre_dis, int neighbor_K)
+                              const typename pcl::PointCloud<PointType>::Ptr &TargetCloud,
+                              typename pcl::PointCloud<PointType>::Ptr &TransformedSource,
+                              Eigen::Matrix4f &transformationS2T,
+                              metrics_type metrics, correspondence_estimator_type ce, transform_estimator_type te,
+                              bool use_reciprocal_correspondence, bool use_trimmed_rejector,
+                              int max_iter, float thre_dis, int neighbor_K)
     {
         clock_t t0, t1, t2;
         t0 = clock();
@@ -2077,7 +2113,6 @@ public:
 
         return mae_nn;
     }
-
 
     /**
     * \brief Estimated the approximate overlapping ratio for Cloud1 considering Cloud2
@@ -2517,8 +2552,8 @@ public:
         transpara[3] = b / s; //sin (ang)
         transpara[4] = a / s; //cos (ang)
 
-        std::cout.setf(std::ios::showpoint); 
-        std::cout.precision(12);             
+        std::cout.setf(std::ios::showpoint);
+        std::cout.precision(12);
 
         std::cout << "Estimated Transformation From A to B" << std::endl
                   << "tx: " << tx << " m" << std::endl
@@ -2625,8 +2660,8 @@ public:
         transpara[5] = transAB(5);
         transpara[6] = transAB(6);
 
-        std::cout.setf(std::ios::showpoint); 
-        std::cout.precision(10);            
+        std::cout.setf(std::ios::showpoint);
+        std::cout.precision(10);
 
         std::cout << "Estimated Transformation From A to B" << std::endl
                   << "tx: " << transpara[0] << " m" << std::endl
@@ -2692,11 +2727,8 @@ public:
                   << " , Z " << pertubate_vector[2];
     }
 
-    
-protected:
-
-private:
-
+  protected:
+  private:
 };
 } // namespace lls_loam
 
