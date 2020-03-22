@@ -726,14 +726,14 @@ public:
 
         for (int i = 0; i < unground_features.size(); i++)
         {
-            if (unground_features[i].linear_2 > neighbor_linear_thre_target && unground_features[i].vectors.principalDirection.z() > linear_vertical_cosine_min) //Vertical Line
+            if (unground_features[i].linear_2 > neighbor_linear_thre_target && std::abs(unground_features[i].vectors.principalDirection.z()) > linear_vertical_cosine_min) //Vertical Line
             {
                 std::pair<float, int> point_linear;
                 point_linear.first = unground_features[i].linear_2;
                 point_linear.second = unground_idx[i];
                 points_linear.push_back(point_linear);
             }
-            else if (unground_features[i].planar_2 > neighbor_planar_thre_target && unground_features[i].vectors.normalDirection.z() < planar_horizontal_cosine_max) //Not the horizontal plane
+            else if (unground_features[i].planar_2 > neighbor_planar_thre_target && std::abs(unground_features[i].vectors.normalDirection.z()) < planar_horizontal_cosine_max) //Not the horizontal plane
             {
                 std::pair<float, int> point_planar;
                 point_planar.first = unground_features[i].planar_2;

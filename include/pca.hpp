@@ -136,7 +136,7 @@ class PrincipleComponentAnalysis
 
 		// Create the normal estimation class, and pass the input dataset to it;
 		pcl::NormalEstimationOMP<pcl::PointXYZ, pcl::Normal> ne;
-		ne.setNumberOfThreads(2);
+		ne.setNumberOfThreads(1);
 		ne.setInputCloud(cloud_pcl);
 		// Create an empty kd-tree representation, and pass it to the normal estimation object;
 		pcl::search::KdTree<pcl::PointXYZ>::Ptr tree(new pcl::search::KdTree<pcl::PointXYZ>());
@@ -190,6 +190,7 @@ class PrincipleComponentAnalysis
 
 		int i;
 #pragma omp parallel for private(i) //Multi-thread
+
 		for (i = 0; i < inputPointCloud->points.size(); i++)
 		{
 			std::vector<int> search_indices; //point index Vector
@@ -218,11 +219,11 @@ class PrincipleComponentAnalysis
 		pcl::KdTreeFLANN<Point_T> tree;
 		tree.setInputCloud(inputPointCloud);
 		features.resize(inputPointCloud->size());
-        
+
 		int i;
-		
+
 #pragma omp parallel for private(i) //Multi-thread
-		for ( i = 0; i < inputPointCloud->points.size(); i++)
+		for (i = 0; i < inputPointCloud->points.size(); i++)
 		{
 			std::vector<int> search_indices; //point index Vector
 			std::vector<float> distances;	//distance Vector
