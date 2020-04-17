@@ -38,7 +38,7 @@ public:
         return true;
     }
 
-    // submap odometry save submap
+    // submap odometry -> save submap
     bool saveSubmapToFile(std::string submap_full_cld_save_path,
                           std::string submap_feature_cld_save_path,
                           std::string submap_feature_idx_save_path,
@@ -46,7 +46,8 @@ public:
     {
         clock_t t0, t1;
         t0 = clock();
-        // Save PointCloud
+
+        // Save Point Cloud
         pcl::PointCloud<pcl::PointXYZINormal>::Ptr cld_out(new pcl::PointCloud<pcl::PointXYZINormal>);
         OurPoint2PclPoint(submap.cld_lidar_ptr, cld_out);
         writePcdFile(submap_full_cld_save_path, cld_out);
@@ -78,14 +79,12 @@ public:
             return false;
         }
 
-        //int ground_size, edge_size, planar_size, sphere_size;
-        //        while (!infile.eof())
+    
         while (infile.peek() != EOF) {
             infile >> submap;
             submap.index_type = Submap::Continuous;
             if (infile.fail())
                 break;
-            //            infile >> std::ws;
 
             submaps.push_back(submap);
         }
@@ -419,8 +418,7 @@ public:
         return 1;
     }
 
-
-
+    //import the imu data from file
     bool ReadIMUData(const std::string &fileName, std::vector<std::vector<imu_info_t>> &imu_datas)
     {
         std::ifstream in(fileName.c_str(), std::ios::in);
@@ -450,13 +448,6 @@ public:
 
     bool PoseMatToPose3d(pose_mat_t &poseMat, pose_qua_t &poseQua)
     {
-        /*
-                 *  Eigen Store Matrix first in col, then in row.
-                 *  So it looks like [0, 1, 2, 3, 4, 5, 6, 7, 8] --> | 0  3  6 |
-                 *                                                   | 1  4  7 |
-                 *                                                   | 2  5  8 |
-                 *  be careful when using !!! Eigen::Map !!!
-                 * */
         double rot_matrix[9] = {poseMat.transform[0], poseMat.transform[4], poseMat.transform[8],
                                 poseMat.transform[1], poseMat.transform[5], poseMat.transform[9],
                                 poseMat.transform[2], poseMat.transform[6], poseMat.transform[10]};
@@ -478,12 +469,6 @@ public:
 
     bool PoseMatToPose3d(pose_mat_t &poseMat, pose_se3_t &poseSe3)
     {
-        /*
-                 *  Matrix is stored first in row, then in col.
-                 *  So it looks like [0, 1, 2, 3, 4, 5, 6, 7, 8] --> | 0  1  2 |
-                 *                                                   | 3  4  5 |
-                 *                                                   | 6  7  8 |
-                 * */
         double rot_matrix[9] = {poseMat.transform[0], poseMat.transform[1], poseMat.transform[2],
                                 poseMat.transform[4], poseMat.transform[5], poseMat.transform[6],
                                 poseMat.transform[8], poseMat.transform[9], poseMat.transform[10]};

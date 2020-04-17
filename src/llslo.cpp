@@ -682,8 +682,6 @@ bool Transaction::SubmapOdom(Submap &submap)
             data_loader_.readPcdFile(lidar_root_path_ + "/" + submap.raw_data_group[i].raw_frame.pcd_file_name,
                                      submap.raw_data_group[i].raw_frame.cld_lidar_ptr, 1);  //tag 1 for Point XYZI type
 
-            //TODO Active Objects Filtering (@ Jingwei Li)
-
             // std::vector<std::shared_ptr<PointCloud>> cloud_show_ptr;
             // cloud_show_ptr.push_back(submap.raw_data_group[i].raw_frame.cld_lidar_ptr);
             // viewer_.DispalyNClouds(cloud_show_ptr, "Raw data", INTENSITY, 1);
@@ -1445,8 +1443,6 @@ bool Transaction::RunPureLidarOdometry(Submap &submap)
         if(i>0) submap.raw_data_group[i].raw_frame.init();
         data_loader_.readPcdFile(lidar_root_path_ + "/" + submap.raw_data_group[i].raw_frame.pcd_file_name,
                                  submap.raw_data_group[i].raw_frame.cld_lidar_ptr, 1); //tag 1 for Point XYZI type
-
-        // TODO Active Objects Filtering (@ Jingwei Li)
 
         // std::vector<std::shared_ptr<PointCloud>> cloud_show_ptr;
         // cloud_show_ptr.push_back(submap.raw_data_group[i].raw_frame.cld_lidar_ptr);
